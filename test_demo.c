@@ -52,8 +52,15 @@
 
 #include <netif/ethernet.h>
 
-int main()
+int main(int argc, char** argv)
 {
+    int ret;    
+    /* 1. 初始化DPDK环境抽象层 */
+    ret = rte_eal_init(argc, argv);
+    if (ret < 0) {
+        rte_exit(EXIT_FAILURE, "Cannot init EAL\n");
+    }
+
 
     printf("hello world\n");
 
