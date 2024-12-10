@@ -3,5 +3,6 @@ dpdk/install
 
 app
 main.o
+*.o
 
 .vscode
