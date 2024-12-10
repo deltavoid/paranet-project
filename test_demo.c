@@ -59,7 +59,8 @@ int main()
 
     thread_framework_init(1, 2);
 
-    sleep(10);
+    // sleep(10);
+
 
     return 0;
 }
