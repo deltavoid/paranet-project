@@ -17,8 +17,8 @@ CFLAGS += -I.
 
 LDFLAGS += -lpthread -lm
 
-# C_SRCS = main.c
-C_SRCS = test_demo.c
+C_SRCS = main.c
+# C_SRCS = test_demo.c
 
 C_OBJS = $(C_SRCS:.c=.o)
 
