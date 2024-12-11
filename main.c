@@ -60,6 +60,7 @@
 #include <lwip/timeouts.h>
 #include <lwip/prot/tcp.h>
 #include <lwip/logging.h>
+#include <lwip/thread_framework.h>
 
 #include <netif/ethernet.h>
 
@@ -409,6 +410,15 @@ int main(int argc, char *const *argv)
 		netif_set_link_up(&_netif);
 		netif_set_up(&_netif);
 	}
+
+
+	// thread framework init
+	thread_framework_init(1, 1);
+
+
+
+
+
 
 	LOG_DEBUG("main: 5\n");
 	if (mode_server) { /* server mode */
