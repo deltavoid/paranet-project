@@ -431,7 +431,7 @@ int main(int argc, char *const *argv)
 
 
 	// thread framework init
-	thread_framework_init(1, 3);
+	thread_framework_init(1, 4);
 
 
 
