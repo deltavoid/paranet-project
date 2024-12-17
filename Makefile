@@ -86,7 +86,7 @@ LWIP_OBJS = $(LWIP_SRC_DIR)/src/api/api_lib.o \
 			$(LWIP_SRC_DIR)/src/core/timeouts.o \
 			$(LWIP_SRC_DIR)/src/core/udp.o \
 			$(LWIP_SRC_DIR)/src/core/thread_framework.o \
-			$(LWIP_SRC_DIR)/src/core/tcp_ports.c \
+			$(LWIP_SRC_DIR)/src/core/tcp_ports.o \
 			$(LWIP_SRC_DIR)/src/netif/ethernet.o \
 			$(CONTRIB_SRC_DIR)/ports/unix/port/sys_arch.o
 
