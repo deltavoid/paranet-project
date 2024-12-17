@@ -129,7 +129,7 @@ struct http_response {
 };
 
 // temp buf, not for multi_thread
-char tcp_recv_temp_buf[2048];
+_Thread_local char tcp_recv_temp_buf[2048];
 
 static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 			      struct pbuf *p, err_t err)
@@ -164,66 +164,79 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 		assert(tcp_output(tpcb) == ERR_OK);
 
 	} else { /* client mode */
-		struct http_response *r = (struct http_response *) arg;
-		assert(p->tot_len < (sizeof(r->buf) - r->cur));
-		pbuf_copy_partial(p, &r->buf[r->cur], p->tot_len, 0);
-		r->cur += p->tot_len;
-		switch (r->state) {
-		case 0:
-			{
-				long i;
-				for (i = 0; i < r->cur && r->state == 0; i++) {
-					if (r->buf[i] == 'C') {
-						if (r->cur - i > 15) {
-							if (!memcmp(&r->buf[i], "Content-Length:", 15)) {
-								long j;
-								for (j = 0; j < (r->cur - i - 15); j++) {
-									if (r->buf[i + 15 + j] == '\r') {
-										r->buf[i + 15 + j] = '\0';
-										assert(sscanf(&r->buf[i], "Content-Length: %ld", &r->content_tot_len) == 1);
-										r->buf[i + 15 + j] = '\r';
-										r->state = 1;
-										break;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-			/* fall through */
-		case 1:
-			{
-				long i;
-				for (i = 0; i <= r->cur - 4 && r->state == 1; i++) {
-					if (r->buf[i + 0] == '\r' && r->buf[i + 1] == '\n' && r->buf[i + 2] == '\r' && r->buf[i + 3] == '\n') {
-						r->cur -= i + 4;
-						r->content_recvd = 0;
-						r->state = 2;
-						break;
-					}
-				}
-			}
-			/* fall through */
-		case 2:
-			r->content_recvd += r->cur;
-			if (r->content_recvd == r->content_tot_len) {
-				io_stat[0]++;
-				io_stat[2] += 42;
-				assert(tcp_sndbuf(tpcb) >= 42);
-				assert(tcp_write(tpcb, "GET / HTTP/1.0\r\nConnection: Keep-Alive\r\n\r\n", 42, TCP_WRITE_FLAG_COPY) == ERR_OK);
-				assert(tcp_output(tpcb) == ERR_OK);
-				r->state = 0;
-			}
-			r->cur = 0;
-			break;
-		default:
-			assert(0);
-			break;
-		}
+		// struct http_response *r = (struct http_response *) arg;
+		// assert(p->tot_len < (sizeof(r->buf) - r->cur));
+		// pbuf_copy_partial(p, &r->buf[r->cur], p->tot_len, 0);
+	// 	r->cur += p->tot_len;
+	// 	switch (r->state) {
+	// 	case 0:
+	// 		{
+	// 			long i;
+	// 			for (i = 0; i < r->cur && r->state == 0; i++) {
+	// 				if (r->buf[i] == 'C') {
+	// 					if (r->cur - i > 15) {
+	// 						if (!memcmp(&r->buf[i], "Content-Length:", 15)) {
+	// 							long j;
+	// 							for (j = 0; j < (r->cur - i - 15); j++) {
+	// 								if (r->buf[i + 15 + j] == '\r') {
+	// 									r->buf[i + 15 + j] = '\0';
+	// 									assert(sscanf(&r->buf[i], "Content-Length: %ld", &r->content_tot_len) == 1);
+	// 									r->buf[i + 15 + j] = '\r';
+	// 									r->state = 1;
+	// 									break;
+	// 								}
+	// 							}
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 		/* fall through */
+	// 	case 1:
+	// 		{
+	// 			long i;
+	// 			for (i = 0; i <= r->cur - 4 && r->state == 1; i++) {
+	// 				if (r->buf[i + 0] == '\r' && r->buf[i + 1] == '\n' && r->buf[i + 2] == '\r' && r->buf[i + 3] == '\n') {
+	// 					r->cur -= i + 4;
+	// 					r->content_recvd = 0;
+	// 					r->state = 2;
+	// 					break;
+	// 				}
+	// 			}
+	// 		}
+	// 		/* fall through */
+	// 	case 2:
+	// 		r->content_recvd += r->cur;
+	// 		if (r->content_recvd == r->content_tot_len) {
+	// 			io_stat[0]++;
+	// 			io_stat[2] += 42;
+	// 			assert(tcp_sndbuf(tpcb) >= 42);
+	// 			assert(tcp_write(tpcb, "GET / HTTP/1.0\r\nConnection: Keep-Alive\r\n\r\n", 42, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	// 			assert(tcp_output(tpcb) == ERR_OK);
+	// 			r->state = 0;
+	// 		}
+	// 		r->cur = 0;
+	// 		break;
+	// 	default:
+	// 		assert(0);
+	// 		break;
+	// 	}
+
+		int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
+		pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
+
+        assert(tcp_sndbuf(tpcb) >= copy_len);
+		assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
+		assert(tcp_output(tpcb) == ERR_OK);
+
+	    
 	}
 	tcp_recved(tpcb, p->tot_len);
 	pbuf_free(p);
+
+	int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
+	pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
+
 
 	LOG_DEBUG("tcp_recv_handler: 3, end\n");
 	return ERR_OK;
@@ -264,14 +277,19 @@ static err_t accept_handler(void *arg __attribute__((unused)), struct tcp_pcb *t
 
 static err_t connected_handler(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
+	LOG_DEBUG("connected_handler: 1, begin\n");
+	// while (1) sleep(1);
+
 	if (err != ERR_OK)
 		return err;
 	if ((err = accept_handler(arg, tpcb, err)) != ERR_OK)
 		return err;
 
-	io_stat[2] += 42;
-	assert(tcp_sndbuf(tpcb) >= 42);
-	assert(tcp_write(tpcb, "GET / HTTP/1.0\r\nConnection: Keep-Alive\r\n\r\n", 42, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	// io_stat[2] += 42;
+	int copy_len = 64;
+	assert(tcp_sndbuf(tpcb) >= copy_len);
+	// assert(tcp_write(tpcb, "GET / HTTP/1.0\r\nConnection: Keep-Alive\r\n\r\n", 42, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
 	assert(tcp_output(tpcb) == ERR_OK);
 
 	return ERR_OK;
