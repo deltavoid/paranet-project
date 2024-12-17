@@ -72,13 +72,14 @@
 #define PACKET_BUF_SIZE (1518)
 
 static struct rte_mempool *pktmbuf_pool = NULL;
-static int tx_idx = 0;
-static struct rte_mbuf *tx_mbufs[MAX_PKT_BURST] = { 0 };
+
+static _Thread_local int tx_idx = 0;
+static _Thread_local struct rte_mbuf *tx_mbufs[MAX_PKT_BURST] = { 0 };
 
 static char *httpbuf;
 static size_t httpdatalen;
 
-static void tx_flush(void)
+/* static */ void tx_flush(void)
 {
 	if  (tx_idx > 0)
 	    LOG_DEBUG("tx_flush: tx_idx = %d\n", tx_idx);
