@@ -534,7 +534,7 @@ int main(int argc, char *const *argv)
 			tx_flush();
 
 			// LOG_DEBUG("main: 7.9\n");
-			sys_check_timeouts();
+			// sys_check_timeouts();
 
 			// LOG_DEBUG("main: 7.10\n");
 			{
