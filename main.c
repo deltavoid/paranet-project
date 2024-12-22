@@ -318,7 +318,7 @@ static err_t if_init(struct netif *netif)
 }
 
 
-int netif_poll_once(struct netif* _netif_p)
+unsigned short netif_poll_once(struct netif* _netif_p)
 {
 	// LOG_DEBUG("main: 7.1\n");
 			struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
@@ -589,31 +589,33 @@ int main(int argc, char *const *argv)
 		LOG_DEBUG("main: 7\n");
 		while (1) {
 
-			// LOG_DEBUG("main: 7.1\n");
-			struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
-			unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, 0 /* queue id */, rx_mbufs, MAX_PKT_BURST);
+			// // LOG_DEBUG("main: 7.1\n");
+			// struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
+			// unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, 0 /* queue id */, rx_mbufs, MAX_PKT_BURST);
 
-			// LOG_DEBUG("main: 7.2\n"); 
-			for (i = 0; i < nb_rx; i++) {
+			// // LOG_DEBUG("main: 7.2\n"); 
+			// for (i = 0; i < nb_rx; i++) {
 
 				
-				LOG_DEBUG("main: 7.3\n");
-				{
-					LOG_DEBUG("main: 7.4\n");
-					struct pbuf *p;
-					assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
+			// 	LOG_DEBUG("main: 7.3\n");
+			// 	{
+			// 		LOG_DEBUG("main: 7.4\n");
+			// 		struct pbuf *p;
+			// 		assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
 
-					LOG_DEBUG("main: 7.5\n");
-					pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
+			// 		LOG_DEBUG("main: 7.5\n");
+			// 		pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
 					
-					LOG_DEBUG("main: 7.6\n");
-					p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
-					assert(_netif.input(p, &_netif) == ERR_OK);
+			// 		LOG_DEBUG("main: 7.6\n");
+			// 		p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
+			// 		assert(_netif.input(p, &_netif) == ERR_OK);
 				
-					LOG_DEBUG("main: 7.7\n");
-				}
-				rte_pktmbuf_free(rx_mbufs[i]);
-			}
+			// 		LOG_DEBUG("main: 7.7\n");
+			// 	}
+			// 	rte_pktmbuf_free(rx_mbufs[i]);
+			// }
+
+			unsigned short nb_rx = netif_poll_once(&_netif);
 
 			// LOG_DEBUG("main: 7.8\n");
 			tx_flush();
