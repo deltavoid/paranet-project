@@ -64,7 +64,8 @@
 
 #include <netif/ethernet.h>
 
-#define MAX_PKT_BURST (32)
+// #define MAX_PKT_BURST (32)
+#define MAX_PKT_BURST (128)
 #define NUM_SLOT (256)
 
 #define MEMPOOL_CACHE_SIZE (256)
