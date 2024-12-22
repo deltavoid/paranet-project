@@ -318,11 +318,11 @@ static err_t if_init(struct netif *netif)
 }
 
 
-unsigned short netif_poll_once(struct netif* _netif_p)
+unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 {
 	// LOG_DEBUG("main: 7.1\n");
 			struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
-			unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, 0 /* queue id */, rx_mbufs, MAX_PKT_BURST);
+			unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, queue_id /* queue id */, rx_mbufs, MAX_PKT_BURST);
 
 			// LOG_DEBUG("main: 7.2\n"); 
 			for (i = 0; i < nb_rx; i++) {
@@ -615,7 +615,7 @@ int main(int argc, char *const *argv)
 			// 	rte_pktmbuf_free(rx_mbufs[i]);
 			// }
 
-			unsigned short nb_rx = netif_poll_once(&_netif);
+			unsigned short nb_rx = netif_poll_once(&_netif, 0);
 
 			// LOG_DEBUG("main: 7.8\n");
 			tx_flush();
