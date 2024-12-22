@@ -317,6 +317,89 @@ static err_t if_init(struct netif *netif)
 	return ERR_OK;
 }
 
+
+int netif_poll_once(struct netif* _netif_p)
+{
+	// LOG_DEBUG("main: 7.1\n");
+			struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
+			unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, 0 /* queue id */, rx_mbufs, MAX_PKT_BURST);
+
+			// LOG_DEBUG("main: 7.2\n"); 
+			for (i = 0; i < nb_rx; i++) {
+
+				LOG_DEBUG("main: 7.3\n");
+				{
+					LOG_DEBUG("main: 7.4\n");
+					struct pbuf *p;
+					assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
+
+					LOG_DEBUG("main: 7.5\n");
+					pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
+					
+					LOG_DEBUG("main: 7.6\n");
+					p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
+					assert(_netif_p->input(p, _netif_p) == ERR_OK);
+				
+					LOG_DEBUG("main: 7.7\n");
+				}
+				rte_pktmbuf_free(rx_mbufs[i]);
+			}
+
+	return nb_rx;
+
+}
+
+static int nic_init(int max_epoll_wait_timeout_ms)
+{
+	{
+		uint16_t nb_rxq = 2;
+		// uint16_t nb_txq = 1;
+
+		uint16_t nb_rxd = NUM_SLOT;
+		uint16_t nb_txd = NUM_SLOT;
+		assert((pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool",
+					RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), 8192),
+					MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+					rte_socket_id())) != NULL);
+
+		{
+			struct rte_eth_dev_info dev_info;
+			struct rte_eth_conf local_port_conf = { 0 };
+
+			assert(rte_eth_dev_info_get(0 /* port id */, &dev_info) >= 0);
+
+			if (max_epoll_wait_timeout_ms)
+				local_port_conf.intr_conf.rxq = 1;
+
+			// assert(rte_eth_dev_configure(0 /* port id */, 1 /* num queues */, 1 /* num queues */, &local_port_conf) >= 0);
+			assert(rte_eth_dev_configure(0 /* port id */, nb_rxq /* num rx queues */, 1 /* num tx queues */, &local_port_conf) >= 0);
+
+
+			assert(rte_eth_dev_adjust_nb_rx_tx_desc(0 /* port id */, &nb_rxd, &nb_txd) >= 0);
+
+			for (int i = 0; i < nb_rxq; i++)
+			{
+			    assert(rte_eth_rx_queue_setup(0 /* port id */, i /* queue */, nb_rxd,
+						rte_eth_dev_socket_id(0 /* port id */),
+						&dev_info.default_rxconf,
+						pktmbuf_pool) >= 0);
+			}
+
+			assert(rte_eth_tx_queue_setup(0 /* port id */, 0 /* queue */, nb_txd,
+						rte_eth_dev_socket_id(0 /* port id */),
+						&dev_info.default_txconf) >= 0);
+
+			assert(rte_eth_dev_start(0 /* port id */) >= 0);
+			assert(rte_eth_promiscuous_enable(0 /* port id */) >= 0);
+
+			if (max_epoll_wait_timeout_ms)
+				assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
+		}
+	}
+
+	return 0;
+}
+
 int main(int argc, char *const *argv)
 {
 	struct netif _netif = { 0 };
@@ -382,43 +465,44 @@ int main(int argc, char *const *argv)
 	}
 
 	LOG_DEBUG("main: 3\n");
-	{
-		uint16_t nb_rxd = NUM_SLOT;
-		uint16_t nb_txd = NUM_SLOT;
-		assert((pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool",
-					RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), 8192),
-					MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
-					rte_socket_id())) != NULL);
+	// {
+	// 	uint16_t nb_rxd = NUM_SLOT;
+	// 	uint16_t nb_txd = NUM_SLOT;
+	// 	assert((pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool",
+	// 				RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), 8192),
+	// 				MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+	// 				rte_socket_id())) != NULL);
 
-		{
-			struct rte_eth_dev_info dev_info;
-			struct rte_eth_conf local_port_conf = { 0 };
+	// 	{
+	// 		struct rte_eth_dev_info dev_info;
+	// 		struct rte_eth_conf local_port_conf = { 0 };
 
-			assert(rte_eth_dev_info_get(0 /* port id */, &dev_info) >= 0);
+	// 		assert(rte_eth_dev_info_get(0 /* port id */, &dev_info) >= 0);
 
-			if (max_epoll_wait_timeout_ms)
-				local_port_conf.intr_conf.rxq = 1;
+	// 		if (max_epoll_wait_timeout_ms)
+	// 			local_port_conf.intr_conf.rxq = 1;
 
-			assert(rte_eth_dev_configure(0 /* port id */, 1 /* num queues */, 1 /* num queues */, &local_port_conf) >= 0);
+	// 		assert(rte_eth_dev_configure(0 /* port id */, 1 /* num queues */, 1 /* num queues */, &local_port_conf) >= 0);
 
-			assert(rte_eth_dev_adjust_nb_rx_tx_desc(0 /* port id */, &nb_rxd, &nb_txd) >= 0);
+	// 		assert(rte_eth_dev_adjust_nb_rx_tx_desc(0 /* port id */, &nb_rxd, &nb_txd) >= 0);
 
-			assert(rte_eth_rx_queue_setup(0 /* port id */, 0 /* queue */, nb_rxd,
-						rte_eth_dev_socket_id(0 /* port id */),
-						&dev_info.default_rxconf,
-						pktmbuf_pool) >= 0);
+	// 		assert(rte_eth_rx_queue_setup(0 /* port id */, 0 /* queue */, nb_rxd,
+	// 					rte_eth_dev_socket_id(0 /* port id */),
+	// 					&dev_info.default_rxconf,
+	// 					pktmbuf_pool) >= 0);
 
-			assert(rte_eth_tx_queue_setup(0 /* port id */, 0 /* queue */, nb_txd,
-						rte_eth_dev_socket_id(0 /* port id */),
-						&dev_info.default_txconf) >= 0);
+	// 		assert(rte_eth_tx_queue_setup(0 /* port id */, 0 /* queue */, nb_txd,
+	// 					rte_eth_dev_socket_id(0 /* port id */),
+	// 					&dev_info.default_txconf) >= 0);
 
-			assert(rte_eth_dev_start(0 /* port id */) >= 0);
-			assert(rte_eth_promiscuous_enable(0 /* port id */) >= 0);
+	// 		assert(rte_eth_dev_start(0 /* port id */) >= 0);
+	// 		assert(rte_eth_promiscuous_enable(0 /* port id */) >= 0);
 
-			if (max_epoll_wait_timeout_ms)
-				assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
-		}
-	}
+	// 		if (max_epoll_wait_timeout_ms)
+	// 			assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
+	// 	}
+	// }
+	nic_init(max_epoll_wait_timeout_ms);
 
 	/* setting up lwip */
 	LOG_DEBUG("main: 4\n");
@@ -512,6 +596,7 @@ int main(int argc, char *const *argv)
 			// LOG_DEBUG("main: 7.2\n"); 
 			for (i = 0; i < nb_rx; i++) {
 
+				
 				LOG_DEBUG("main: 7.3\n");
 				{
 					LOG_DEBUG("main: 7.4\n");
