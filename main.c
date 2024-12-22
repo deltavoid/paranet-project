@@ -349,6 +349,27 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 
 }
 
+int max_epoll_wait_timeout_ms = 0;
+
+void netif_rx_test_sleep(unsigned short nb_rx, uint16_t queue_id)
+{
+	LOG_DEBUG("main: 7.11, nb_rx: %d, max_epoll_wait_timeout_ms: %d, queue_id: %d\n",
+			nb_rx, max_epoll_wait_timeout_ms, queue_id);
+
+			if (!nb_rx && max_epoll_wait_timeout_ms) {
+				
+				LOG_DEBUG("main: 7.12\n");
+				assert(!rte_eth_dev_rx_intr_enable(0 /* port id */, queue_id /* queue id */));
+				{
+					struct rte_epoll_event ev;
+					(void) rte_epoll_wait(RTE_EPOLL_PER_THREAD, &ev, 1, max_epoll_wait_timeout_ms < 0 ? 100 : (max_epoll_wait_timeout_ms > 100 ? 100 : max_epoll_wait_timeout_ms));
+				}
+
+				LOG_DEBUG("main: 7.13\n");
+				rte_eth_dev_rx_intr_disable(0 /* port id */, queue_id /* queue id */);
+			}
+}
+
 static int nic_init(int max_epoll_wait_timeout_ms)
 {
 	{
@@ -407,7 +428,7 @@ int main(int argc, char *const *argv)
 	size_t content_len = 1;
 	int server_port = 10000, num_conn = 1;
 	bool mode_server = true;
-	int max_epoll_wait_timeout_ms = 0;
+	// int max_epoll_wait_timeout_ms = 0;
 
 	LOG_DEBUG("main: 1\n");
 
