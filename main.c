@@ -615,10 +615,11 @@ int main(int argc, char *const *argv)
 			// 	rte_pktmbuf_free(rx_mbufs[i]);
 			// }
 
-			unsigned short nb_rx = netif_poll_once(&_netif, 0);
+			// unsigned short nb_rx = netif_poll_once(&_netif, 0);
 
 			// LOG_DEBUG("main: 7.8\n");
-			tx_flush();
+			// tx_flush();
+			sleep(1);
 
 			// LOG_DEBUG("main: 7.9\n");
 			// sys_check_timeouts();
@@ -636,18 +637,18 @@ int main(int argc, char *const *argv)
 			}
 
 			// LOG_DEBUG("main: 7.11\n");
-			if (!nb_rx && max_epoll_wait_timeout_ms) {
+			// if (!nb_rx && max_epoll_wait_timeout_ms) {
 				
-				LOG_DEBUG("main: 7.12\n");
-				assert(!rte_eth_dev_rx_intr_enable(0 /* port id */, 0 /* queue id */));
-				{
-					struct rte_epoll_event ev;
-					(void) rte_epoll_wait(RTE_EPOLL_PER_THREAD, &ev, 1, max_epoll_wait_timeout_ms < 0 ? 100 : (max_epoll_wait_timeout_ms > 100 ? 100 : max_epoll_wait_timeout_ms));
-				}
+			// 	LOG_DEBUG("main: 7.12\n");
+			// 	assert(!rte_eth_dev_rx_intr_enable(0 /* port id */, 0 /* queue id */));
+			// 	{
+			// 		struct rte_epoll_event ev;
+			// 		(void) rte_epoll_wait(RTE_EPOLL_PER_THREAD, &ev, 1, max_epoll_wait_timeout_ms < 0 ? 100 : (max_epoll_wait_timeout_ms > 100 ? 100 : max_epoll_wait_timeout_ms));
+			// 	}
 
-				LOG_DEBUG("main: 7.13\n");
-				rte_eth_dev_rx_intr_disable(0 /* port id */, 0 /* queue id */);
-			}
+			// 	LOG_DEBUG("main: 7.13\n");
+			// 	rte_eth_dev_rx_intr_disable(0 /* port id */, 0 /* queue id */);
+			// }
 
 		    usleep(1);
 			// LOG_DEBUG("main: 7.14\n");
