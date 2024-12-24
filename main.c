@@ -340,14 +340,15 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 
 					LOG_DEBUG("main: 7.5\n");
 					pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
-					
+					p->related_rte_mbuf = rx_mbufs[i];
+
 					LOG_DEBUG("main: 7.6\n");
 					p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
 					assert(_netif_p->input(p, _netif_p) == ERR_OK);
 				
 					LOG_DEBUG("main: 7.7\n");
 				}
-				rte_pktmbuf_free(rx_mbufs[i]);
+				// rte_pktmbuf_free(rx_mbufs[i]);
 			}
 
 	return nb_rx;
