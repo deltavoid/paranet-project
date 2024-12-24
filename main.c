@@ -77,6 +77,8 @@ static struct rte_mempool *pktmbuf_pool = NULL;
 static _Thread_local int tx_idx = 0;
 static _Thread_local struct rte_mbuf *tx_mbufs[MAX_PKT_BURST] = { 0 };
 
+_Thread_local int thread_tx_queue_id = 0; // default 0, tcp thread set it to sepcific id;
+
 static char *httpbuf;
 static size_t httpdatalen;
 
@@ -84,10 +86,12 @@ static size_t httpdatalen;
 {
 	if  (tx_idx > 0)
 	    LOG_DEBUG("tx_flush: tx_idx = %d\n", tx_idx);
+
+	assert(thread_tx_queue_id >= 0 && thread_tx_queue_id < 1 + g_tcp_thread_num);
 	
 	int xmit = tx_idx, xmitted = 0;
 	while (xmitted != xmit)
-		xmitted += rte_eth_tx_burst(0 /* port id */, 0 /* queue id */, &tx_mbufs[xmitted], xmit - xmitted);
+		xmitted += rte_eth_tx_burst(0 /* port id */, thread_tx_queue_id /* queue id */, &tx_mbufs[xmitted], xmit - xmitted);
 	tx_idx = 0;
 }
 
@@ -371,11 +375,13 @@ void netif_rx_test_sleep(unsigned short nb_rx, uint16_t queue_id)
 			}
 }
 
-static int nic_init(int max_epoll_wait_timeout_ms)
+static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_timeout_ms)
 {
+	LOG_DEBUG("nic_init: 1, begin, ip_thread_num: %d, tcp_thread_num: %d\n", 
+	        ip_thread_num, tcp_thread_num);
 	{
-		uint16_t nb_rxq = 2;
-		uint16_t nb_txq = 1;
+		uint16_t nb_rxq = ip_thread_num;
+		uint16_t nb_txq = 1 + tcp_thread_num;
 
 		uint16_t nb_rxd = NUM_SLOT;
 		uint16_t nb_txd = NUM_SLOT;
@@ -384,6 +390,7 @@ static int nic_init(int max_epoll_wait_timeout_ms)
 					MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
 					rte_socket_id())) != NULL);
 
+		LOG_DEBUG("nic_init: 2\n");
 		{
 			struct rte_eth_dev_info dev_info;
 			// struct rte_eth_conf local_port_conf = { 0 };
@@ -407,12 +414,16 @@ static int nic_init(int max_epoll_wait_timeout_ms)
 
 			local_port_conf.rx_adv_conf.rss_conf.rss_hf &= dev_info.flow_type_rss_offloads;
 
+			
+			LOG_DEBUG("nic_init: 3\n");
 			// assert(rte_eth_dev_configure(0 /* port id */, 1 /* num queues */, 1 /* num queues */, &local_port_conf) >= 0);
 			assert(rte_eth_dev_configure(0 /* port id */, nb_rxq /* num rx queues */, nb_txq /* num tx queues */, &local_port_conf) >= 0);
 
 
+			LOG_DEBUG("nic_init: 4\n");
 			assert(rte_eth_dev_adjust_nb_rx_tx_desc(0 /* port id */, &nb_rxd, &nb_txd) >= 0);
 
+			LOG_DEBUG("nic_init: 5\n");
 			for (int i = 0; i < nb_rxq; i++)
 			{
 			    assert(rte_eth_rx_queue_setup(0 /* port id */, i /* queue */, nb_rxd,
@@ -421,18 +432,25 @@ static int nic_init(int max_epoll_wait_timeout_ms)
 						pktmbuf_pool) >= 0);
 			}
 
-			assert(rte_eth_tx_queue_setup(0 /* port id */, 0 /* queue */, nb_txd,
+			LOG_DEBUG("nic_init: 6\n");
+			for (int i = 0; i < nb_txq; i++)
+			{
+			    assert(rte_eth_tx_queue_setup(0 /* port id */, i /* queue */, nb_txd,
 						rte_eth_dev_socket_id(0 /* port id */),
 						&dev_info.default_txconf) >= 0);
+			}
 
+			LOG_DEBUG("nic_init: 7\n");
 			assert(rte_eth_dev_start(0 /* port id */) >= 0);
 			assert(rte_eth_promiscuous_enable(0 /* port id */) >= 0);
 
+			LOG_DEBUG("nic_init: 8\n");
 			if (max_epoll_wait_timeout_ms)
 				assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
 		}
 	}
 
+	LOG_DEBUG("nic_init: 9, end\n");
 	return 0;
 }
 
@@ -538,7 +556,11 @@ int main(int argc, char *const *argv)
 	// 			assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
 	// 	}
 	// }
-	nic_init(max_epoll_wait_timeout_ms);
+	int ip_thread_num = 2;
+	int tcp_thread_num = 3;
+
+
+	nic_init(ip_thread_num, tcp_thread_num, max_epoll_wait_timeout_ms);
 
 	/* setting up lwip */
 	LOG_DEBUG("main: 4\n");
@@ -552,7 +574,7 @@ int main(int argc, char *const *argv)
 
 
 	// thread framework init
-	thread_framework_init(2, 3, &_netif);
+	thread_framework_init(ip_thread_num, tcp_thread_num, &_netif);
 
 
 
