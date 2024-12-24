@@ -552,7 +552,7 @@ int main(int argc, char *const *argv)
 
 
 	// thread framework init
-	thread_framework_init(2, 2, &_netif);
+	thread_framework_init(2, 3, &_netif);
 
 
 
@@ -653,9 +653,9 @@ int main(int argc, char *const *argv)
 
 			// unsigned short nb_rx = netif_poll_once(&_netif, 0);
 
-			// LOG_DEBUG("main: 7.8\n");
+			LOG_INFO("main: 7.8\n");
 			// tx_flush();
-			sleep(1);
+			sleep(2);
 
 			// LOG_DEBUG("main: 7.9\n");
 			// sys_check_timeouts();
@@ -686,10 +686,16 @@ int main(int argc, char *const *argv)
 			// 	rte_eth_dev_rx_intr_disable(0 /* port id */, 0 /* queue id */);
 			// }
 
-		    usleep(1);
+		    // usleep(1);
 			// LOG_DEBUG("main: 7.14\n");
 		}
 	}
+
+	// for (int i = 0; i < g_tcp_thread_num; i++)
+	// {
+	// 	pthread_join(tcp_thread_ctxs[i].pthread_ctx, NULL);
+	// }
+
 
 
 	LOG_DEBUG("main: 8\n");
