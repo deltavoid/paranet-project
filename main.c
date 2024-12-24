@@ -375,7 +375,7 @@ static int nic_init(int max_epoll_wait_timeout_ms)
 {
 	{
 		uint16_t nb_rxq = 2;
-		// uint16_t nb_txq = 1;
+		uint16_t nb_txq = 1;
 
 		uint16_t nb_rxd = NUM_SLOT;
 		uint16_t nb_txd = NUM_SLOT;
@@ -386,15 +386,29 @@ static int nic_init(int max_epoll_wait_timeout_ms)
 
 		{
 			struct rte_eth_dev_info dev_info;
-			struct rte_eth_conf local_port_conf = { 0 };
+			// struct rte_eth_conf local_port_conf = { 0 };
+			struct rte_eth_conf local_port_conf = {
+				.rxmode = {
+					.mq_mode = RTE_ETH_MQ_RX_RSS, // 关键：启用多队列接收模式
+					.split_hdr_size = 0,
+				},
+				.rx_adv_conf = {
+					.rss_conf = {
+						.rss_key = NULL,											  // 使用网卡默认的哈希Key，通常设为NULL
+						.rss_hf = RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP, // 指定对哪些字段做哈希
+					},
+				},
+			};
 
 			assert(rte_eth_dev_info_get(0 /* port id */, &dev_info) >= 0);
 
 			if (max_epoll_wait_timeout_ms)
 				local_port_conf.intr_conf.rxq = 1;
 
+			local_port_conf.rx_adv_conf.rss_conf.rss_hf &= dev_info.flow_type_rss_offloads;
+
 			// assert(rte_eth_dev_configure(0 /* port id */, 1 /* num queues */, 1 /* num queues */, &local_port_conf) >= 0);
-			assert(rte_eth_dev_configure(0 /* port id */, nb_rxq /* num rx queues */, 1 /* num tx queues */, &local_port_conf) >= 0);
+			assert(rte_eth_dev_configure(0 /* port id */, nb_rxq /* num rx queues */, nb_txq /* num tx queues */, &local_port_conf) >= 0);
 
 
 			assert(rte_eth_dev_adjust_nb_rx_tx_desc(0 /* port id */, &nb_rxd, &nb_txd) >= 0);
@@ -538,7 +552,7 @@ int main(int argc, char *const *argv)
 
 
 	// thread framework init
-	thread_framework_init(1, 2, &_netif);
+	thread_framework_init(2, 2, &_netif);
 
 
 
