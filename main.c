@@ -556,7 +556,7 @@ int main(int argc, char *const *argv)
 	// 			assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
 	// 	}
 	// }
-	int ip_thread_num = 2;
+	int ip_thread_num = 3;
 	int tcp_thread_num = 3;
 
 
