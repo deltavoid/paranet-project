@@ -336,18 +336,21 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 				{
 					LOG_DEBUG("main: 7.4\n");
 					struct pbuf *p;
-					assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
+					// assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
+					assert((p = pbuf_alloc_from_rte_malloc(rte_pktmbuf_pkt_len(rx_mbufs[i]))) != NULL);
 
 					LOG_DEBUG("main: 7.5\n");
 					pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
-					
-					LOG_DEBUG("main: 7.6\n");
+					rte_pktmbuf_free(rx_mbufs[i]);
+
+					LOG_DEBUG("main: 7.6, p->payload: %lx, rte data: %lx\n",
+					        (long)p->payload, (long)rte_pktmbuf_mtod(rx_mbufs[i], void *));
 					p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
 					assert(_netif_p->input(p, _netif_p) == ERR_OK);
 				
 					LOG_DEBUG("main: 7.7\n");
 				}
-				rte_pktmbuf_free(rx_mbufs[i]);
+				// rte_pktmbuf_free(rx_mbufs[i]);
 			}
 
 	return nb_rx;
