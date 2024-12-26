@@ -81,7 +81,7 @@ static _Thread_local int tx_idx = 0;
 static _Thread_local struct rte_mbuf *tx_mbufs[MAX_PKT_BURST] = { 0 };
 
 // _Thread_local volatile int thread_tx_queue_id = 0; // default 0, tcp thread set it to sepcific id;
-extern _Thread_local volatile int thread_tx_queue_id; // default 0, tcp thread set it to sepcific id;
+// extern _Thread_local volatile int thread_tx_queue_id; // default 0, tcp thread set it to sepcific id;
 
 
 
@@ -100,7 +100,6 @@ static size_t httpdatalen;
 	int xmit = tx_idx, xmitted = 0;
 	while (xmitted != xmit)
 	{
-
 		int ret = rte_eth_tx_burst(0 /* port id */, thread_tx_queue_id /* queue id */, &tx_mbufs[xmitted], xmit - xmitted);
 		xmitted += ret;
 
@@ -111,7 +110,7 @@ static size_t httpdatalen;
 		}
 	}
 
-		tx_idx = 0;
+	tx_idx = 0;
 }
 
 static err_t low_level_output(struct netif *netif __attribute__((unused)), struct pbuf *p)
@@ -263,7 +262,6 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 		assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
 		assert(tcp_output(tpcb) == ERR_OK);
 
-	    
 	}
 	tcp_recved(tpcb, p->tot_len);
 	pbuf_free(p);
@@ -351,37 +349,35 @@ static err_t if_init(struct netif *netif)
 unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 {
 	// LOG_DEBUG("main: 7.1\n");
-			struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
-			unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, queue_id /* queue id */, rx_mbufs, MAX_PKT_BURST);
+	struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
+	unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, queue_id /* queue id */, rx_mbufs, MAX_PKT_BURST);
 
-			// LOG_DEBUG("main: 7.2\n"); 
-			for (i = 0; i < nb_rx; i++) {
+	// LOG_DEBUG("main: 7.2\n");
+	for (i = 0; i < nb_rx; i++)
+	{
+		LOG_DEBUG("main: 7.3\n");
+		{
+			LOG_DEBUG("main: 7.4\n");
+			struct pbuf *p;
+			// assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
+			// assert((p = pbuf_alloc_from_rte_malloc(rte_pktmbuf_pkt_len(rx_mbufs[i]))) != NULL);
+			assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_RTE_MALLOC)) != NULL);
 
-				LOG_DEBUG("main: 7.3\n");
-				{
-					LOG_DEBUG("main: 7.4\n");
-					struct pbuf *p;
-					// assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
-					// assert((p = pbuf_alloc_from_rte_malloc(rte_pktmbuf_pkt_len(rx_mbufs[i]))) != NULL);
-					assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_RTE_MALLOC)) != NULL);
+			LOG_DEBUG("main: 7.5\n");
+			pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
+			rte_pktmbuf_free(rx_mbufs[i]);
 
+			LOG_DEBUG("main: 7.6, p->payload: %lx, rte data: %lx\n",
+					  (long)p->payload, (long)rte_pktmbuf_mtod(rx_mbufs[i], void *));
+			p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
+			assert(_netif_p->input(p, _netif_p) == ERR_OK);
 
-					LOG_DEBUG("main: 7.5\n");
-					pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
-					rte_pktmbuf_free(rx_mbufs[i]);
-
-					LOG_DEBUG("main: 7.6, p->payload: %lx, rte data: %lx\n",
-					        (long)p->payload, (long)rte_pktmbuf_mtod(rx_mbufs[i], void *));
-					p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
-					assert(_netif_p->input(p, _netif_p) == ERR_OK);
-				
-					LOG_DEBUG("main: 7.7\n");
-				}
-				// rte_pktmbuf_free(rx_mbufs[i]);
-			}
+			LOG_DEBUG("main: 7.7\n");
+		}
+		// rte_pktmbuf_free(rx_mbufs[i]);
+	}
 
 	return nb_rx;
-
 }
 
 int max_epoll_wait_timeout_ms = 0;
@@ -389,26 +385,27 @@ int max_epoll_wait_timeout_ms = 0;
 void netif_rx_test_sleep(unsigned short nb_rx, uint16_t queue_id)
 {
 	LOG_DEBUG("main: 7.11, nb_rx: %d, max_epoll_wait_timeout_ms: %d, queue_id: %d\n",
-			nb_rx, max_epoll_wait_timeout_ms, queue_id);
+			  nb_rx, max_epoll_wait_timeout_ms, queue_id);
 
-			if (!nb_rx && max_epoll_wait_timeout_ms) {
-				
-				LOG_DEBUG("main: 7.12\n");
-				assert(!rte_eth_dev_rx_intr_enable(0 /* port id */, queue_id /* queue id */));
-				{
-					struct rte_epoll_event ev;
-					(void) rte_epoll_wait(RTE_EPOLL_PER_THREAD, &ev, 1, max_epoll_wait_timeout_ms < 0 ? 100 : (max_epoll_wait_timeout_ms > 100 ? 100 : max_epoll_wait_timeout_ms));
-				}
+	if (!nb_rx && max_epoll_wait_timeout_ms)
+	{
 
-				LOG_DEBUG("main: 7.13\n");
-				rte_eth_dev_rx_intr_disable(0 /* port id */, queue_id /* queue id */);
-			}
+		LOG_DEBUG("main: 7.12\n");
+		assert(!rte_eth_dev_rx_intr_enable(0 /* port id */, queue_id /* queue id */));
+		{
+			struct rte_epoll_event ev;
+			(void)rte_epoll_wait(RTE_EPOLL_PER_THREAD, &ev, 1, max_epoll_wait_timeout_ms < 0 ? 100 : (max_epoll_wait_timeout_ms > 100 ? 100 : max_epoll_wait_timeout_ms));
+		}
+
+		LOG_DEBUG("main: 7.13\n");
+		rte_eth_dev_rx_intr_disable(0 /* port id */, queue_id /* queue id */);
+	}
 }
 
 static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_timeout_ms)
 {
-	LOG_DEBUG("nic_init: 1, begin, ip_thread_num: %d, tcp_thread_num: %d\n", 
-	        ip_thread_num, tcp_thread_num);
+	LOG_DEBUG("nic_init: 1, begin, ip_thread_num: %d, tcp_thread_num: %d\n",
+			  ip_thread_num, tcp_thread_num);
 	{
 		uint16_t nb_rxq = ip_thread_num;
 		uint16_t nb_txq = 1 + tcp_thread_num;
@@ -416,9 +413,9 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 		uint16_t nb_rxd = NUM_SLOT;
 		uint16_t nb_txd = NUM_SLOT;
 		assert((pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool",
-					RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), /* 8192 */65536 - 1),
-					MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
-					rte_socket_id())) != NULL);
+													   RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), /* 8192 */ 65536 - 1),
+													   MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+													   rte_socket_id())) != NULL);
 
 		LOG_DEBUG("nic_init: 2\n");
 		{
@@ -444,11 +441,9 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 
 			local_port_conf.rx_adv_conf.rss_conf.rss_hf &= dev_info.flow_type_rss_offloads;
 
-			
 			LOG_DEBUG("nic_init: 3\n");
 			// assert(rte_eth_dev_configure(0 /* port id */, 1 /* num queues */, 1 /* num queues */, &local_port_conf) >= 0);
 			assert(rte_eth_dev_configure(0 /* port id */, nb_rxq /* num rx queues */, nb_txq /* num tx queues */, &local_port_conf) >= 0);
-
 
 			LOG_DEBUG("nic_init: 4\n");
 			assert(rte_eth_dev_adjust_nb_rx_tx_desc(0 /* port id */, &nb_rxd, &nb_txd) >= 0);
@@ -456,18 +451,18 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 			LOG_DEBUG("nic_init: 5\n");
 			for (int i = 0; i < nb_rxq; i++)
 			{
-			    assert(rte_eth_rx_queue_setup(0 /* port id */, i /* queue */, nb_rxd,
-						rte_eth_dev_socket_id(0 /* port id */),
-						&dev_info.default_rxconf,
-						pktmbuf_pool) >= 0);
+				assert(rte_eth_rx_queue_setup(0 /* port id */, i /* queue */, nb_rxd,
+											  rte_eth_dev_socket_id(0 /* port id */),
+											  &dev_info.default_rxconf,
+											  pktmbuf_pool) >= 0);
 			}
 
 			LOG_DEBUG("nic_init: 6\n");
 			for (int i = 0; i < nb_txq; i++)
 			{
-			    assert(rte_eth_tx_queue_setup(0 /* port id */, i /* queue */, nb_txd,
-						rte_eth_dev_socket_id(0 /* port id */),
-						&dev_info.default_txconf) >= 0);
+				assert(rte_eth_tx_queue_setup(0 /* port id */, i /* queue */, nb_txd,
+											  rte_eth_dev_socket_id(0 /* port id */),
+											  &dev_info.default_txconf) >= 0);
 			}
 
 			LOG_DEBUG("nic_init: 7\n");
@@ -589,8 +584,8 @@ int main(int argc, char *const *argv)
 	int ip_thread_num = 4;
 	int tcp_thread_num = 8;
 
-
 	nic_init(ip_thread_num, tcp_thread_num, max_epoll_wait_timeout_ms);
+
 
 	/* setting up lwip */
 	LOG_DEBUG("main: 4\n");
@@ -605,9 +600,6 @@ int main(int argc, char *const *argv)
 
 	// thread framework init
 	thread_framework_init(ip_thread_num, tcp_thread_num, &_netif);
-
-
-
 
 
 
@@ -683,8 +675,6 @@ int main(int argc, char *const *argv)
 
 			// // LOG_DEBUG("main: 7.2\n"); 
 			// for (i = 0; i < nb_rx; i++) {
-
-				
 			// 	LOG_DEBUG("main: 7.3\n");
 			// 	{
 			// 		LOG_DEBUG("main: 7.4\n");
