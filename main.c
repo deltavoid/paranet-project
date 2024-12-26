@@ -337,7 +337,9 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 					LOG_DEBUG("main: 7.4\n");
 					struct pbuf *p;
 					// assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
-					assert((p = pbuf_alloc_from_rte_malloc(rte_pktmbuf_pkt_len(rx_mbufs[i]))) != NULL);
+					// assert((p = pbuf_alloc_from_rte_malloc(rte_pktmbuf_pkt_len(rx_mbufs[i]))) != NULL);
+					assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_RTE_MALLOC)) != NULL);
+
 
 					LOG_DEBUG("main: 7.5\n");
 					pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
