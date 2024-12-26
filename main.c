@@ -156,6 +156,15 @@ struct http_response {
 // temp buf, not for multi_thread
 _Thread_local char tcp_recv_temp_buf[2048];
 
+int tcp_recv_copy_data(struct pbuf* p, char* buf, int max_len)
+{
+	int copy_len = p->tot_len < max_len ? p->tot_len : max_len;
+
+    pbuf_copy_partial(p, buf, copy_len, 0);
+
+	return copy_len;
+}
+
 static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 			      struct pbuf *p, err_t err)
 {
@@ -258,9 +267,6 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 	}
 	tcp_recved(tpcb, p->tot_len);
 	pbuf_free(p);
-
-	int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
-	pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
 
 
 	LOG_DEBUG("tcp_recv_handler: 3, end\n");
