@@ -66,7 +66,10 @@
 
 // #define MAX_PKT_BURST (32)
 #define MAX_PKT_BURST (128)
-#define NUM_SLOT (256)
+// #define NUM_SLOT (256)
+#define NUM_SLOT (512)
+
+
 
 #define MEMPOOL_CACHE_SIZE (256)
 
@@ -391,7 +394,7 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 		uint16_t nb_rxd = NUM_SLOT;
 		uint16_t nb_txd = NUM_SLOT;
 		assert((pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool",
-					RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), 8192),
+					RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), /* 8192 */65536 - 1),
 					MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
 					rte_socket_id())) != NULL);
 
@@ -680,9 +683,9 @@ int main(int argc, char *const *argv)
 
 			// unsigned short nb_rx = netif_poll_once(&_netif, 0);
 
-			LOG_INFO("main: 7.8\n");
+			// LOG_INFO("main: 7.8\n");
 			// tx_flush();
-			sleep(2);
+			sleep(1);
 
 			// LOG_DEBUG("main: 7.9\n");
 			// sys_check_timeouts();
@@ -695,9 +698,16 @@ int main(int argc, char *const *argv)
 							(mode_server ? "server" : "client"), io_stat[0], io_stat[1] * 8, io_stat[2] * 8);
 					memset(io_stat, 0, sizeof(io_stat));
 					prev_ts = now;
-				}
 
+					for (int tid = 0; tid < g_tcp_thread_num; tid++)
+					{
+						struct tcp_thread_ctx *ctx = &tcp_thread_ctxs[tid];
+
+						LOG_INFO("tid: %d, loop_state: %d\n", tid, ctx->loop_state);
+					}
+				}
 			}
+
 
 			// LOG_DEBUG("main: 7.11\n");
 			// if (!nb_rx && max_epoll_wait_timeout_ms) {
