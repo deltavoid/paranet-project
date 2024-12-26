@@ -80,7 +80,10 @@ static struct rte_mempool *pktmbuf_pool = NULL;
 static _Thread_local int tx_idx = 0;
 static _Thread_local struct rte_mbuf *tx_mbufs[MAX_PKT_BURST] = { 0 };
 
-_Thread_local int thread_tx_queue_id = 0; // default 0, tcp thread set it to sepcific id;
+// _Thread_local volatile int thread_tx_queue_id = 0; // default 0, tcp thread set it to sepcific id;
+extern _Thread_local volatile int thread_tx_queue_id; // default 0, tcp thread set it to sepcific id;
+
+
 
 static char *httpbuf;
 static size_t httpdatalen;
@@ -88,14 +91,27 @@ static size_t httpdatalen;
 /* static */ void tx_flush(void)
 {
 	if  (tx_idx > 0)
-	    LOG_DEBUG("tx_flush: tx_idx = %d\n", tx_idx);
+	    LOG_DEBUG("tx_flush: tx_idx = %d, thread_tx_queue_id: %d\n", tx_idx, thread_tx_queue_id);
+	
+	int try_num = 0;
 
 	assert(thread_tx_queue_id >= 0 && thread_tx_queue_id < 1 + g_tcp_thread_num);
 	
 	int xmit = tx_idx, xmitted = 0;
 	while (xmitted != xmit)
-		xmitted += rte_eth_tx_burst(0 /* port id */, thread_tx_queue_id /* queue id */, &tx_mbufs[xmitted], xmit - xmitted);
-	tx_idx = 0;
+	{
+
+		int ret = rte_eth_tx_burst(0 /* port id */, thread_tx_queue_id /* queue id */, &tx_mbufs[xmitted], xmit - xmitted);
+		xmitted += ret;
+
+		if (++try_num > 10)
+		{
+			LOG_INFO("tx_flush, thread_tx_queue_id: %d, ret :%d, xmit: %d, xmitted: %d\n",
+					 thread_tx_queue_id, ret, xmit, xmitted);
+		}
+	}
+
+		tx_idx = 0;
 }
 
 static err_t low_level_output(struct netif *netif __attribute__((unused)), struct pbuf *p)
