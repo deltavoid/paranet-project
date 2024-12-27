@@ -364,7 +364,9 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 			struct pbuf *p;
 			// assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
 			// assert((p = pbuf_alloc_from_rte_malloc(rte_pktmbuf_pkt_len(rx_mbufs[i]))) != NULL);
-			assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_RTE_MALLOC)) != NULL);
+			// assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_RTE_MALLOC)) != NULL);
+			assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_RTE_MBUF_RX)) != NULL);
+
 
 			LOG_DEBUG("main: 7.5\n");
 			pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
@@ -422,6 +424,9 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 
 		pktmbuf_pool_tcp_tx = tcp_create_pktmbuf_pool_tcp_tx(tcp_thread_num);
 		assert(pktmbuf_pool_tcp_tx != NULL);
+
+		pktmbuf_pool_rx = tcp_create_pktmbuf_pool_rx(tcp_thread_num);
+		assert(pktmbuf_pool_rx != NULL);
 
 		LOG_DEBUG("nic_init: 2\n");
 		{
