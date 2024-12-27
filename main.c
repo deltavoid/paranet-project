@@ -422,8 +422,8 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 													   MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
 													   rte_socket_id())) != NULL);
 
-		pktmbuf_pool_tcp_tx = tcp_create_pktmbuf_pool_tcp_tx(tcp_thread_num);
-		assert(pktmbuf_pool_tcp_tx != NULL);
+		// pktmbuf_pool_tcp_tx = tcp_create_pktmbuf_pool_tcp_tx(tcp_thread_num);
+		// assert(pktmbuf_pool_tcp_tx != NULL);
 
 		pktmbuf_pool_rx = tcp_create_pktmbuf_pool_rx(tcp_thread_num);
 		assert(pktmbuf_pool_rx != NULL);
