@@ -592,8 +592,8 @@ int main(int argc, char *const *argv)
 	// 			assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
 	// 	}
 	// }
-	int ip_thread_num = 4;
-	int tcp_thread_num = 8;
+	int ip_thread_num = 10;
+	int tcp_thread_num = 20;
 
 	nic_init(ip_thread_num, tcp_thread_num, max_epoll_wait_timeout_ms);
 
