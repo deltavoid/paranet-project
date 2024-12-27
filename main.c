@@ -77,6 +77,9 @@
 
 static struct rte_mempool *pktmbuf_pool = NULL;
 
+// extern struct rte_mempool *pktmbuf_pool_tcp_tx = NULL;
+
+
 static _Thread_local int tx_idx = 0;
 static _Thread_local struct rte_mbuf *tx_mbufs[MAX_PKT_BURST] = { 0 };
 
@@ -416,6 +419,9 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 													   RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), /* 8192 */ 65536 - 1),
 													   MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
 													   rte_socket_id())) != NULL);
+
+		pktmbuf_pool_tcp_tx = tcp_create_pktmbuf_pool_tcp_tx(tcp_thread_num);
+		assert(pktmbuf_pool_tcp_tx != NULL);
 
 		LOG_DEBUG("nic_init: 2\n");
 		{
