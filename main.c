@@ -425,8 +425,8 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 		// pktmbuf_pool_tcp_tx = tcp_create_pktmbuf_pool_tcp_tx(tcp_thread_num);
 		// assert(pktmbuf_pool_tcp_tx != NULL);
 
-		pktmbuf_pool_rx = tcp_create_pktmbuf_pool_rx(tcp_thread_num);
-		assert(pktmbuf_pool_rx != NULL);
+		// pktmbuf_pool_rx = tcp_create_pktmbuf_pool_rx(tcp_thread_num);
+		// assert(pktmbuf_pool_rx != NULL);
 
 		LOG_DEBUG("nic_init: 2\n");
 		{
