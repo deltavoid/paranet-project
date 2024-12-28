@@ -318,7 +318,7 @@ static err_t accept_handler(void *arg __attribute__((unused)), struct tcp_pcb *t
 
 static err_t connected_handler(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
-	LOG_INFO("connected_handler: 1, begin\n");
+	LOG_INFO("connected_handler: 1, begin -----------------------------\n");
 	// while (1) sleep(1);
 
 	if (err != ERR_OK)
@@ -546,7 +546,7 @@ ip4_addr_t _srv_ip;
 
 void client_mode_init()
 {
-	LOG_INFO("client_mode_init\n");
+	LOG_INFO("client_mode_init --------------- \n");
 	int i;
 		printf("%d concurrent connection(s)\n", num_conn);
 		for (i = 0; i < num_conn; i++) {
@@ -567,15 +567,16 @@ void client_mode_init()
 
 bool mode_server = true;
 
-void app_init()
+void user_app_init()
 {
-	LOG_DEBUG("main: 5\n");
+	LOG_INFO("main: 5, %d, -------------------------\n", mode_server);
 	if (mode_server) { /* server mode */
 
 		server_mode_init();
 
 	} else { /* client mode */
 
+		// while (1) sleep(1);
 		client_mode_init();
 	}
 
@@ -584,10 +585,10 @@ void app_init()
 int main(int argc, char *const *argv)
 {
 	struct netif _netif = { 0 };
-	ip4_addr_t _addr, _mask, _gate, _srv_ip;
+	ip4_addr_t _addr, _mask, _gate/* , _srv_ip */;
 	// size_t content_len = 1;
 	// int server_port = 10000, num_conn = 1;
-	bool mode_server = true;
+	// bool mode_server = true;
 	// int max_epoll_wait_timeout_ms = 0;
 
 	LOG_DEBUG("main: 1\n");
@@ -764,14 +765,16 @@ int main(int argc, char *const *argv)
 	// 	// }
 	// 	client_mode_init();
 	// }
-	app_init();
+	
+	// move app_init to tcp_thread_run, id = 0
+	// app_init();
 
 	LOG_DEBUG("main: 6\n");
 	printf("-- application has started --\n");
 
 	/* primary loop */
 	{
-		unsigned long prev_ts = 0;
+		// unsigned long prev_ts = 0;
 		
 		LOG_DEBUG("main: 7\n");
 		while (1) {
@@ -810,51 +813,51 @@ int main(int argc, char *const *argv)
 			// sys_check_timeouts();
 
 			// LOG_DEBUG("main: 7.10\n");
-			{
-				unsigned long now = ({ struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); (ts.tv_sec * 1000000000UL + ts.tv_nsec); });
-				if (now - prev_ts > 1000000000UL) {
-					printf("[%s]: %10lu Requests/sec  (rx %11lu bps, tx %11lu bbs)\n",
-							(mode_server ? "server" : "client"), io_stat[0], io_stat[1] * 8, io_stat[2] * 8);
-					memset(io_stat, 0, sizeof(io_stat));
+			// {
+			// 	unsigned long now = ({ struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); (ts.tv_sec * 1000000000UL + ts.tv_nsec); });
+			// 	if (now - prev_ts > 1000000000UL) {
+			// 		printf("[%s]: %10lu Requests/sec  (rx %11lu bps, tx %11lu bbs)\n",
+			// 				(mode_server ? "server" : "client"), io_stat[0], io_stat[1] * 8, io_stat[2] * 8);
+			// 		memset(io_stat, 0, sizeof(io_stat));
 
-					for (int tid = 0; tid < g_tcp_thread_num; tid++)
-					{
-						struct tcp_thread_ctx *ctx = &tcp_thread_ctxs[tid];
+			// 		for (int tid = 0; tid < g_tcp_thread_num; tid++)
+			// 		{
+			// 			struct tcp_thread_ctx *ctx = &tcp_thread_ctxs[tid];
 
-						LOG_INFO("tid: %d, loop_state: %d\n", tid, ctx->loop_state);
-					}
+			// 			LOG_INFO("tid: %d, loop_state: %d\n", tid, ctx->loop_state);
+			// 		}
 
-					uint64_t recv_pkt_tot = 0, recv_pkt_byte_tot = 0;
-					for (int i = 0; i < g_tcp_thread_num; i++)
-					{   // 
-						recv_pkt_tot += recv_pkt_cnt[i];
-						recv_pkt_cnt[i] = 0;
-						recv_pkt_byte_tot += recv_pkt_byte_cnt[i];
-						recv_pkt_byte_cnt[i] = 0;
-					}
+			// 		uint64_t recv_pkt_tot = 0, recv_pkt_byte_tot = 0;
+			// 		for (int i = 0; i < g_tcp_thread_num; i++)
+			// 		{   // 
+			// 			recv_pkt_tot += recv_pkt_cnt[i];
+			// 			recv_pkt_cnt[i] = 0;
+			// 			recv_pkt_byte_tot += recv_pkt_byte_cnt[i];
+			// 			recv_pkt_byte_cnt[i] = 0;
+			// 		}
 
-					double duration = (double)(now - prev_ts) / 1000000000;
-					double recv_pkt_per_sec = (double)recv_pkt_tot / duration;
-					double recv_pkt_byte_per_sec = (double)recv_pkt_byte_tot / duration;
+			// 		double duration = (double)(now - prev_ts) / 1000000000;
+			// 		double recv_pkt_per_sec = (double)recv_pkt_tot / duration;
+			// 		double recv_pkt_byte_per_sec = (double)recv_pkt_byte_tot / duration;
 
-					LOG_INFO("duration: %lf, recv_pkt_per_sec: %lf, recv_pkt_byte_per_sec: %lf\n",
-						duration, recv_pkt_per_sec, recv_pkt_byte_per_sec);
+			// 		LOG_INFO("duration: %lf, recv_pkt_per_sec: %lf, recv_pkt_byte_per_sec: %lf\n",
+			// 			duration, recv_pkt_per_sec, recv_pkt_byte_per_sec);
 
 					
-					uint64_t tcp_input_frontend_pkt_cnt_tot = 0;
-					for (int i = 0; i < g_ip_thread_num; i++)
-					{
-						tcp_input_frontend_pkt_cnt_tot += tcp_input_frontend_pkt_cnt[i];
-						tcp_input_frontend_pkt_cnt[i] = 0;
-					}
+			// 		uint64_t tcp_input_frontend_pkt_cnt_tot = 0;
+			// 		for (int i = 0; i < g_ip_thread_num; i++)
+			// 		{
+			// 			tcp_input_frontend_pkt_cnt_tot += tcp_input_frontend_pkt_cnt[i];
+			// 			tcp_input_frontend_pkt_cnt[i] = 0;
+			// 		}
 
-					double tcp_input_frontend_pkt_cnt_per_sec = (double)tcp_input_frontend_pkt_cnt_tot / duration;
-					LOG_INFO("tcp_input_frontend_pkt_cnt_per_sec: %lf\n", tcp_input_frontend_pkt_cnt_per_sec);
+			// 		double tcp_input_frontend_pkt_cnt_per_sec = (double)tcp_input_frontend_pkt_cnt_tot / duration;
+			// 		LOG_INFO("tcp_input_frontend_pkt_cnt_per_sec: %lf\n", tcp_input_frontend_pkt_cnt_per_sec);
 
 
-					prev_ts = now;
-				}
-			}
+			// 		prev_ts = now;
+			// 	}
+			// }
 
 
 			// LOG_DEBUG("main: 7.11\n");
