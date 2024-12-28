@@ -267,6 +267,9 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 		int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
 		pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
 
+		recv_pkt_cnt[thread_tx_queue_id - 1]++;
+		recv_pkt_byte_cnt[thread_tx_queue_id - 1] += copy_len;
+
         assert(tcp_sndbuf(tpcb) >= copy_len);
 		assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
 		assert(tcp_output(tpcb) == ERR_OK);
@@ -315,7 +318,7 @@ static err_t accept_handler(void *arg __attribute__((unused)), struct tcp_pcb *t
 
 static err_t connected_handler(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
-	LOG_DEBUG("connected_handler: 1, begin\n");
+	LOG_INFO("connected_handler: 1, begin\n");
 	// while (1) sleep(1);
 
 	if (err != ERR_OK)
