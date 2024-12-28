@@ -167,6 +167,9 @@ int tcp_recv_copy_data(struct pbuf* p, char* buf, int max_len)
 	return copy_len;
 }
 
+uint64_t recv_pkt_cnt[TCP_THREAD_MAX_NUM];
+uint64_t recv_pkt_byte_cnt[TCP_THREAD_MAX_NUM];
+
 static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 			      struct pbuf *p, err_t err)
 {
@@ -187,6 +190,9 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 		// char buf[4] = { 0 };
 		int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
 		pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
+
+		recv_pkt_cnt[thread_tx_queue_id - 1]++;
+		recv_pkt_byte_cnt[thread_tx_queue_id - 1] += copy_len;
 
 		// if (!strncmp(buf, "GET", 3)) {
 		// 	io_stat[0]++;
@@ -592,8 +598,8 @@ int main(int argc, char *const *argv)
 	// 			assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
 	// 	}
 	// }
-	int ip_thread_num = 10;
-	int tcp_thread_num = 20;
+	int ip_thread_num = 4;
+	int tcp_thread_num = 4;
 
 	nic_init(ip_thread_num, tcp_thread_num, max_epoll_wait_timeout_ms);
 
@@ -720,7 +726,6 @@ int main(int argc, char *const *argv)
 					printf("[%s]: %10lu Requests/sec  (rx %11lu bps, tx %11lu bbs)\n",
 							(mode_server ? "server" : "client"), io_stat[0], io_stat[1] * 8, io_stat[2] * 8);
 					memset(io_stat, 0, sizeof(io_stat));
-					prev_ts = now;
 
 					for (int tid = 0; tid < g_tcp_thread_num; tid++)
 					{
@@ -728,6 +733,36 @@ int main(int argc, char *const *argv)
 
 						LOG_INFO("tid: %d, loop_state: %d\n", tid, ctx->loop_state);
 					}
+
+					uint64_t recv_pkt_tot = 0, recv_pkt_byte_tot = 0;
+					for (int i = 0; i < g_tcp_thread_num; i++)
+					{   // 
+						recv_pkt_tot += recv_pkt_cnt[i];
+						recv_pkt_cnt[i] = 0;
+						recv_pkt_byte_tot += recv_pkt_byte_cnt[i];
+						recv_pkt_byte_cnt[i] = 0;
+					}
+
+					double duration = (double)(now - prev_ts) / 1000000000;
+					double recv_pkt_per_sec = (double)recv_pkt_tot / duration;
+					double recv_pkt_byte_per_sec = (double)recv_pkt_byte_tot / duration;
+
+					LOG_INFO("duration: %lf, recv_pkt_per_sec: %lf, recv_pkt_byte_per_sec: %lf\n",
+						duration, recv_pkt_per_sec, recv_pkt_byte_per_sec);
+
+					
+					uint64_t tcp_input_frontend_pkt_cnt_tot = 0;
+					for (int i = 0; i < g_ip_thread_num; i++)
+					{
+						tcp_input_frontend_pkt_cnt_tot += tcp_input_frontend_pkt_cnt[i];
+						tcp_input_frontend_pkt_cnt[i] = 0;
+					}
+
+					double tcp_input_frontend_pkt_cnt_per_sec = (double)tcp_input_frontend_pkt_cnt_tot / duration;
+					LOG_INFO("tcp_input_frontend_pkt_cnt_per_sec: %lf\n", tcp_input_frontend_pkt_cnt_per_sec);
+
+
+					prev_ts = now;
 				}
 			}
 
