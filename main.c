@@ -565,6 +565,22 @@ void client_mode_init()
 
 }
 
+bool mode_server = true;
+
+void app_init()
+{
+	LOG_DEBUG("main: 5\n");
+	if (mode_server) { /* server mode */
+
+		server_mode_init();
+
+	} else { /* client mode */
+
+		client_mode_init();
+	}
+
+}
+
 int main(int argc, char *const *argv)
 {
 	struct netif _netif = { 0 };
@@ -689,65 +705,66 @@ int main(int argc, char *const *argv)
 
 
 
-	LOG_DEBUG("main: 5\n");
-	if (mode_server) { /* server mode */
+	// LOG_DEBUG("main: 5\n");
+	// if (mode_server) { /* server mode */
 		
-		// LOG_DEBUG("main: 5.1\n");
-		// {
-		// 	size_t buflen = content_len + 256 /* for http hdr */;
-		// 	char *content;
-		// 	assert((httpbuf = (char *) malloc(buflen)) != NULL);
-		// 	assert((content = (char *) malloc(content_len + 1)) != NULL);
-		// 	memset(content, 'A', content_len);
-		// 	content[content_len] = '\0';
-		// 	httpdatalen = snprintf(httpbuf, buflen, "HTTP/1.1 200 OK\r\nContent-Length: %lu\r\nConnection: keep-alive\r\n\r\n%s", content_len, content);
-		// 	free(content);
-		// 	printf("http data length: %lu bytes\n", httpdatalen);
-		// }
+	// 	// LOG_DEBUG("main: 5.1\n");
+	// 	// {
+	// 	// 	size_t buflen = content_len + 256 /* for http hdr */;
+	// 	// 	char *content;
+	// 	// 	assert((httpbuf = (char *) malloc(buflen)) != NULL);
+	// 	// 	assert((content = (char *) malloc(content_len + 1)) != NULL);
+	// 	// 	memset(content, 'A', content_len);
+	// 	// 	content[content_len] = '\0';
+	// 	// 	httpdatalen = snprintf(httpbuf, buflen, "HTTP/1.1 200 OK\r\nContent-Length: %lu\r\nConnection: keep-alive\r\n\r\n%s", content_len, content);
+	// 	// 	free(content);
+	// 	// 	printf("http data length: %lu bytes\n", httpdatalen);
+	// 	// }
 
-		// LOG_DEBUG("main: 5.2\n");
-		// {
-		// 	struct tcp_pcb *tpcb, *_tpcb;
+	// 	// LOG_DEBUG("main: 5.2\n");
+	// 	// {
+	// 	// 	struct tcp_pcb *tpcb, *_tpcb;
 		
-		// 	LOG_DEBUG("main: 5.2.1\n");
-		// 	assert((_tpcb = tcp_new()) != NULL);
+	// 	// 	LOG_DEBUG("main: 5.2.1\n");
+	// 	// 	assert((_tpcb = tcp_new()) != NULL);
 			
-		// 	LOG_DEBUG("main: 5.2.2\n");
-		// 	assert(tcp_bind(_tpcb, IP_ADDR_ANY, server_port) == ERR_OK);
+	// 	// 	LOG_DEBUG("main: 5.2.2\n");
+	// 	// 	assert(tcp_bind(_tpcb, IP_ADDR_ANY, server_port) == ERR_OK);
 			
-		// 	LOG_DEBUG("main: 5.2.3.\n");
-		// 	assert((tpcb = tcp_listen(_tpcb)) != NULL);
+	// 	// 	LOG_DEBUG("main: 5.2.3.\n");
+	// 	// 	assert((tpcb = tcp_listen(_tpcb)) != NULL);
 			
-		// 	LOG_DEBUG("main: 5.2.4\n");
-		// 	tcp_accept(tpcb, accept_handler);
+	// 	// 	LOG_DEBUG("main: 5.2.4\n");
+	// 	// 	tcp_accept(tpcb, accept_handler);
 
-		// 	LOG_DEBUG("main: 5.2.5\n");
-		// 	tcp_ext_arg_set_callbacks(tpcb, 0, &tcp_ext_arg_cbs);
-		// 	tcp_ext_arg_set(tpcb, 0, NULL);
+	// 	// 	LOG_DEBUG("main: 5.2.5\n");
+	// 	// 	tcp_ext_arg_set_callbacks(tpcb, 0, &tcp_ext_arg_cbs);
+	// 	// 	tcp_ext_arg_set(tpcb, 0, NULL);
 		
-		// 	LOG_DEBUG("main: 5.2.6\n");
-		// }
+	// 	// 	LOG_DEBUG("main: 5.2.6\n");
+	// 	// }
 
-		server_mode_init();
+	// 	server_mode_init();
 
-	} else { /* client mode */
-		// int i;
-		// printf("%d concurrent connection(s)\n", num_conn);
-		// for (i = 0; i < num_conn; i++) {
-		// 	struct tcp_pcb *tpcb;
-		// 	assert((tpcb = tcp_new()) != NULL);
-		// 	{
-		// 		struct http_response *r;
-		// 		assert((r = (struct http_response *) malloc(sizeof(struct http_response))) != NULL);
-		// 		r->state = 0;
-		// 		r->cur = 0;
-		// 		tcp_arg(tpcb, (void *) r);
-		// 		tcp_ext_arg_set(tpcb, 0, (void *) r);
-		// 	}
-		// 	assert(tcp_connect(tpcb, &_srv_ip, server_port, connected_handler) == ERR_OK);
-		// }
-		client_mode_init();
-	}
+	// } else { /* client mode */
+	// 	// int i;
+	// 	// printf("%d concurrent connection(s)\n", num_conn);
+	// 	// for (i = 0; i < num_conn; i++) {
+	// 	// 	struct tcp_pcb *tpcb;
+	// 	// 	assert((tpcb = tcp_new()) != NULL);
+	// 	// 	{
+	// 	// 		struct http_response *r;
+	// 	// 		assert((r = (struct http_response *) malloc(sizeof(struct http_response))) != NULL);
+	// 	// 		r->state = 0;
+	// 	// 		r->cur = 0;
+	// 	// 		tcp_arg(tpcb, (void *) r);
+	// 	// 		tcp_ext_arg_set(tpcb, 0, (void *) r);
+	// 	// 	}
+	// 	// 	assert(tcp_connect(tpcb, &_srv_ip, server_port, connected_handler) == ERR_OK);
+	// 	// }
+	// 	client_mode_init();
+	// }
+	app_init();
 
 	LOG_DEBUG("main: 6\n");
 	printf("-- application has started --\n");
