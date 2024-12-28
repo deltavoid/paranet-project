@@ -542,8 +542,26 @@ void server_mode_init()
 
 }
 
+ip4_addr_t _srv_ip;
+
 void client_mode_init()
 {
+	LOG_INFO("client_mode_init\n");
+	int i;
+		printf("%d concurrent connection(s)\n", num_conn);
+		for (i = 0; i < num_conn; i++) {
+			struct tcp_pcb *tpcb;
+			assert((tpcb = tcp_new()) != NULL);
+			{
+				struct http_response *r;
+				assert((r = (struct http_response *) malloc(sizeof(struct http_response))) != NULL);
+				r->state = 0;
+				r->cur = 0;
+				tcp_arg(tpcb, (void *) r);
+				tcp_ext_arg_set(tpcb, 0, (void *) r);
+			}
+			assert(tcp_connect(tpcb, &_srv_ip, server_port, connected_handler) == ERR_OK);
+		}
 
 }
 
@@ -713,21 +731,22 @@ int main(int argc, char *const *argv)
 		server_mode_init();
 
 	} else { /* client mode */
-		int i;
-		printf("%d concurrent connection(s)\n", num_conn);
-		for (i = 0; i < num_conn; i++) {
-			struct tcp_pcb *tpcb;
-			assert((tpcb = tcp_new()) != NULL);
-			{
-				struct http_response *r;
-				assert((r = (struct http_response *) malloc(sizeof(struct http_response))) != NULL);
-				r->state = 0;
-				r->cur = 0;
-				tcp_arg(tpcb, (void *) r);
-				tcp_ext_arg_set(tpcb, 0, (void *) r);
-			}
-			assert(tcp_connect(tpcb, &_srv_ip, server_port, connected_handler) == ERR_OK);
-		}
+		// int i;
+		// printf("%d concurrent connection(s)\n", num_conn);
+		// for (i = 0; i < num_conn; i++) {
+		// 	struct tcp_pcb *tpcb;
+		// 	assert((tpcb = tcp_new()) != NULL);
+		// 	{
+		// 		struct http_response *r;
+		// 		assert((r = (struct http_response *) malloc(sizeof(struct http_response))) != NULL);
+		// 		r->state = 0;
+		// 		r->cur = 0;
+		// 		tcp_arg(tpcb, (void *) r);
+		// 		tcp_ext_arg_set(tpcb, 0, (void *) r);
+		// 	}
+		// 	assert(tcp_connect(tpcb, &_srv_ip, server_port, connected_handler) == ERR_OK);
+		// }
+		client_mode_init();
 	}
 
 	LOG_DEBUG("main: 6\n");
