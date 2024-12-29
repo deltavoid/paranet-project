@@ -416,6 +416,8 @@ void netif_rx_test_sleep(unsigned short nb_rx, uint16_t queue_id)
 	}
 }
 
+struct rte_mempool *nic_rx_pktmbuf_pools[IP_THREAD_MAX_NUM];
+
 static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_timeout_ms)
 {
 	LOG_DEBUG("nic_init: 1, begin, ip_thread_num: %d, tcp_thread_num: %d\n",
@@ -428,8 +430,22 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 		uint16_t nb_txd = NUM_SLOT;
 		assert((pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool",
 													   RTE_MAX(1 /* nb_ports */ * (nb_rxd + nb_txd + MAX_PKT_BURST + 1 * MEMPOOL_CACHE_SIZE), /* 8192 */ 65536 - 1),
-													   MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+													   512, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
 													   rte_socket_id())) != NULL);
+
+	    for (int i = 0; i < ip_thread_num; i++)
+		{
+			char pool_name[50];
+			snprintf(pool_name, 50, "nic_rx_pool-%d", i);
+			struct rte_mempool *pool = rte_pktmbuf_pool_create(/* "mbuf_pool" */pool_name,
+												4096 - 1,  512, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+													   rte_socket_id());
+	        if  (pool == NULL)
+			{   LOG_INFO("nic rx pool init failed\n");
+				return -1;
+			}
+			nic_rx_pktmbuf_pools[i] = pool;
+		}
 
 		// pktmbuf_pool_tcp_tx = tcp_create_pktmbuf_pool_tcp_tx(tcp_thread_num);
 		// assert(pktmbuf_pool_tcp_tx != NULL);
@@ -449,7 +465,8 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 				.rx_adv_conf = {
 					.rss_conf = {
 						.rss_key = NULL,											  // 使用网卡默认的哈希Key，通常设为NULL
-						.rss_hf = RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP, // 指定对哪些字段做哈希
+						// .rss_hf = RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP, // 指定对哪些字段做哈希
+					    .rss_hf = RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP, // 指定对哪些字段做哈希
 					},
 				},
 			};
@@ -474,7 +491,7 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 				assert(rte_eth_rx_queue_setup(0 /* port id */, i /* queue */, nb_rxd,
 											  rte_eth_dev_socket_id(0 /* port id */),
 											  &dev_info.default_rxconf,
-											  pktmbuf_pool) >= 0);
+											  nic_rx_pktmbuf_pools[i]) >= 0);
 			}
 
 			LOG_DEBUG("nic_init: 6\n");
