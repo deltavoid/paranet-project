@@ -91,6 +91,10 @@ static _Thread_local struct rte_mbuf *tx_mbufs[MAX_PKT_BURST] = { 0 };
 // static char *httpbuf;
 // static size_t httpdatalen;
 
+struct rte_mempool *nic_rx_pktmbuf_pools[IP_THREAD_MAX_NUM];
+
+
+
 /* static */ void tx_flush(void)
 {
 	if  (tx_idx > 0)
@@ -131,7 +135,19 @@ static err_t low_level_output(struct netif *netif __attribute__((unused)), struc
 
 	pbuf_copy_partial(p, bufptr, p->tot_len, 0);
 
-	assert((tx_mbufs[tx_idx] = rte_pktmbuf_alloc(pktmbuf_pool)) != NULL);
+	// assert((tx_mbufs[tx_idx] = rte_pktmbuf_alloc(pktmbuf_pool)) != NULL);
+	struct rte_mbuf* tx_mbuf = NULL;
+	{
+		if  (thread_tx_queue_id > 0)
+		{   tx_mbuf = rte_pktmbuf_alloc(get_tcp_thread_ctx_default()->pktmbuf_pool_tcp_tx);
+		}
+		else 
+		{  tx_mbuf = rte_pktmbuf_alloc(pktmbuf_pool);
+		}
+	}
+	assert(tx_mbuf != NULL);
+	tx_mbufs[tx_idx] = tx_mbuf;
+
 	assert(p->tot_len <= RTE_MBUF_DEFAULT_BUF_SIZE);
 	rte_memcpy(rte_pktmbuf_mtod(tx_mbufs[tx_idx], void *), bufptr, p->tot_len);
 	rte_pktmbuf_pkt_len(tx_mbufs[tx_idx]) = rte_pktmbuf_data_len(tx_mbufs[tx_idx]) = p->tot_len;
@@ -416,7 +432,7 @@ void netif_rx_test_sleep(unsigned short nb_rx, uint16_t queue_id)
 	}
 }
 
-struct rte_mempool *nic_rx_pktmbuf_pools[IP_THREAD_MAX_NUM];
+// struct rte_mempool *nic_rx_pktmbuf_pools[IP_THREAD_MAX_NUM];
 
 static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_timeout_ms)
 {
