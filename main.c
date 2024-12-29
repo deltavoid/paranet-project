@@ -356,8 +356,9 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id, int64_t* pr
 	{
 		// LOG_DEBUG("main: 7.3\n");
 		{
-			long t[5];
-			t[0]  = get_mono_tnesc();
+			// long t[5];
+			// t[0]  = get_mono_tnesc();
+			ip_thread_ts[0] = get_mono_tnesc();
 
 			LOG_DEBUG("main: 7.4\n");
 			struct pbuf *p;
@@ -371,7 +372,9 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id, int64_t* pr
 			pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
 			rte_pktmbuf_free(rx_mbufs[i]);
 
-			t[1]  = get_mono_tnesc();
+			// t[1]  = get_mono_tnesc();
+			ip_thread_ts[1] = get_mono_tnesc();
+
 
 			LOG_DEBUG("main: 7.6, p->payload: %lx, rte data: %lx\n",
 					  (long)p->payload, (long)rte_pktmbuf_mtod(rx_mbufs[i], void *));
@@ -379,12 +382,13 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id, int64_t* pr
 			assert(_netif_p->input(p, _netif_p) == ERR_OK);
 
 			LOG_DEBUG("main: 7.7\n");
-			t[2]  = get_mono_tnesc();
+			// t[2]  = get_mono_tnesc();
+			ip_thread_ts[6] = get_mono_tnesc();
 			(*process_cnt_p)++;
 
-			for (int j = 1; j <= 2; j++)
+			for (int j = 1; j <= 6; j++)
 			{
-				long duration = t[j] - t[j - 1];
+				long duration = ip_thread_ts[j] - ip_thread_ts [j - 1];
 				process_time_a[j] += duration;
 			}
 		}
