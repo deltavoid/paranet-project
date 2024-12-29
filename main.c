@@ -67,7 +67,7 @@
 // #define MAX_PKT_BURST (32)
 #define MAX_PKT_BURST (256)
 // #define NUM_SLOT (256)
-#define NUM_SLOT (512)
+#define NUM_SLOT (1024)
 
 
 
@@ -468,7 +468,7 @@ static int nic_init(int ip_thread_num, int tcp_thread_num, int max_epoll_wait_ti
 			LOG_DEBUG("nic_init: 4\n");
 			assert(rte_eth_dev_adjust_nb_rx_tx_desc(0 /* port id */, &nb_rxd, &nb_txd) >= 0);
 
-			LOG_DEBUG("nic_init: 5\n");
+			LOG_INFO("nic_init: 5, nb_rxd: %d, nb_txd: %d\n", nb_rxd, nb_txd);
 			for (int i = 0; i < nb_rxq; i++)
 			{
 				assert(rte_eth_rx_queue_setup(0 /* port id */, i /* queue */, nb_rxd,
