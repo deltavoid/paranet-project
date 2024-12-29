@@ -345,7 +345,7 @@ static err_t if_init(struct netif *netif)
 }
 
 
-unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
+unsigned short netif_poll_once(struct netif* _netif_p, int queue_id, int64_t* process_cnt_p, int64_t* process_time_a)
 {
 	// LOG_DEBUG("main: 7.1\n");
 	struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
@@ -354,8 +354,11 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 	// LOG_DEBUG("main: 7.2\n");
 	for (i = 0; i < nb_rx; i++)
 	{
-		LOG_DEBUG("main: 7.3\n");
+		// LOG_DEBUG("main: 7.3\n");
 		{
+			long t[5];
+			t[0]  = get_mono_tnesc();
+
 			LOG_DEBUG("main: 7.4\n");
 			struct pbuf *p;
 			// assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
@@ -368,12 +371,22 @@ unsigned short netif_poll_once(struct netif* _netif_p, int queue_id)
 			pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
 			rte_pktmbuf_free(rx_mbufs[i]);
 
+			t[1]  = get_mono_tnesc();
+
 			LOG_DEBUG("main: 7.6, p->payload: %lx, rte data: %lx\n",
 					  (long)p->payload, (long)rte_pktmbuf_mtod(rx_mbufs[i], void *));
 			p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
 			assert(_netif_p->input(p, _netif_p) == ERR_OK);
 
 			LOG_DEBUG("main: 7.7\n");
+			t[2]  = get_mono_tnesc();
+			(*process_cnt_p)++;
+
+			for (int j = 1; j <= 2; j++)
+			{
+				long duration = t[j] - t[j - 1];
+				process_time_a[j] += duration;
+			}
 		}
 		// rte_pktmbuf_free(rx_mbufs[i]);
 	}
