@@ -161,7 +161,7 @@ static err_t low_level_output(struct netif *netif __attribute__((unused)), struc
 	return ERR_OK;
 }
 
-static unsigned long io_stat[3] = { 0 };
+// static unsigned long io_stat[3] = { 0 };
 
 struct http_response {
 	int state;
@@ -185,12 +185,28 @@ int tcp_recv_copy_data(struct pbuf* p, char* buf, int max_len)
 
 uint64_t recv_pkt_cnt[TCP_THREAD_MAX_NUM];
 uint64_t recv_pkt_byte_cnt[TCP_THREAD_MAX_NUM];
+uint64_t recv_pkt_rtt_us[TCP_THREAD_MAX_NUM];
+
+_Thread_local struct timespec recv_time;
+
+void tcp_recv_handler_profile(int len)
+{
+	recv_pkt_cnt[thread_tx_queue_id - 1]++;
+	recv_pkt_byte_cnt[thread_tx_queue_id - 1] += len;
+
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	int64_t rtt_us = (now.tv_nsec - recv_time.tv_nsec) / 1000 + (now.tv_sec - recv_time.tv_sec) * 1000 * 1000;
+	recv_pkt_rtt_us[thread_tx_queue_id - 1] += rtt_us;
+	recv_time = now;
+}
 
 static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 			      struct pbuf *p, err_t err)
 {
 	// LOG_DEBUG("tcp_recv_handler: 1, p->tot_len = %d\n", p->tot_len);
     LOG_DEBUG("tcp_recv_handler: 1\n");
+	LWIP_UNUSED_ARG(arg);
 
 
 	if (err != ERR_OK)
@@ -199,98 +215,53 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 		tcp_close(tpcb);
 		return ERR_OK;
 	}
-	io_stat[1] += p->tot_len;
+	// io_stat[1] += p->tot_len;
 	LOG_DEBUG("tcp_recv_handler: 2, p->tot_len: %d\n", p->tot_len);
 
-	if (!arg) { /* server mode */
-		// char buf[4] = { 0 };
-		int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
-		pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
+	// if (!arg) { /* server mode */
+	// 	// char buf[4] = { 0 };
+	// 	int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
+	// 	pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
 
-		recv_pkt_cnt[thread_tx_queue_id - 1]++;
-		recv_pkt_byte_cnt[thread_tx_queue_id - 1] += copy_len;
+	// 	recv_pkt_cnt[thread_tx_queue_id - 1]++;
+	// 	recv_pkt_byte_cnt[thread_tx_queue_id - 1] += copy_len;
 
-		// if (!strncmp(buf, "GET", 3)) {
-		// 	io_stat[0]++;
-		// 	io_stat[2] += httpdatalen;
-		// 	assert(tcp_sndbuf(tpcb) >= httpdatalen);
-		// 	assert(tcp_write(tpcb, httpbuf, httpdatalen, TCP_WRITE_FLAG_COPY) == ERR_OK);
-		// 	assert(tcp_output(tpcb) == ERR_OK);
-		// }
-		assert(tcp_sndbuf(tpcb) >= copy_len);
-		assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
-		assert(tcp_output(tpcb) == ERR_OK);
+	// 	// if (!strncmp(buf, "GET", 3)) {
+	// 	// 	io_stat[0]++;
+	// 	// 	io_stat[2] += httpdatalen;
+	// 	// 	assert(tcp_sndbuf(tpcb) >= httpdatalen);
+	// 	// 	assert(tcp_write(tpcb, httpbuf, httpdatalen, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	// 	// 	assert(tcp_output(tpcb) == ERR_OK);
+	// 	// }
+	// 	assert(tcp_sndbuf(tpcb) >= copy_len);
+	// 	assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	// 	assert(tcp_output(tpcb) == ERR_OK);
 
-	} else { /* client mode */
-		// struct http_response *r = (struct http_response *) arg;
-		// assert(p->tot_len < (sizeof(r->buf) - r->cur));
-		// pbuf_copy_partial(p, &r->buf[r->cur], p->tot_len, 0);
-	// 	r->cur += p->tot_len;
-	// 	switch (r->state) {
-	// 	case 0:
-	// 		{
-	// 			long i;
-	// 			for (i = 0; i < r->cur && r->state == 0; i++) {
-	// 				if (r->buf[i] == 'C') {
-	// 					if (r->cur - i > 15) {
-	// 						if (!memcmp(&r->buf[i], "Content-Length:", 15)) {
-	// 							long j;
-	// 							for (j = 0; j < (r->cur - i - 15); j++) {
-	// 								if (r->buf[i + 15 + j] == '\r') {
-	// 									r->buf[i + 15 + j] = '\0';
-	// 									assert(sscanf(&r->buf[i], "Content-Length: %ld", &r->content_tot_len) == 1);
-	// 									r->buf[i + 15 + j] = '\r';
-	// 									r->state = 1;
-	// 									break;
-	// 								}
-	// 							}
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 		/* fall through */
-	// 	case 1:
-	// 		{
-	// 			long i;
-	// 			for (i = 0; i <= r->cur - 4 && r->state == 1; i++) {
-	// 				if (r->buf[i + 0] == '\r' && r->buf[i + 1] == '\n' && r->buf[i + 2] == '\r' && r->buf[i + 3] == '\n') {
-	// 					r->cur -= i + 4;
-	// 					r->content_recvd = 0;
-	// 					r->state = 2;
-	// 					break;
-	// 				}
-	// 			}
-	// 		}
-	// 		/* fall through */
-	// 	case 2:
-	// 		r->content_recvd += r->cur;
-	// 		if (r->content_recvd == r->content_tot_len) {
-	// 			io_stat[0]++;
-	// 			io_stat[2] += 42;
-	// 			assert(tcp_sndbuf(tpcb) >= 42);
-	// 			assert(tcp_write(tpcb, "GET / HTTP/1.0\r\nConnection: Keep-Alive\r\n\r\n", 42, TCP_WRITE_FLAG_COPY) == ERR_OK);
-	// 			assert(tcp_output(tpcb) == ERR_OK);
-	// 			r->state = 0;
-	// 		}
-	// 		r->cur = 0;
-	// 		break;
-	// 	default:
-	// 		assert(0);
-	// 		break;
-	// 	}
+	// } else { /* client mode */
 
-		int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
-		pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
+	// 	int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
+	// 	pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
 
-		recv_pkt_cnt[thread_tx_queue_id - 1]++;
-		recv_pkt_byte_cnt[thread_tx_queue_id - 1] += copy_len;
 
-        assert(tcp_sndbuf(tpcb) >= copy_len);
-		assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
-		assert(tcp_output(tpcb) == ERR_OK);
+	// 	recv_pkt_cnt[thread_tx_queue_id - 1]++;
+	// 	recv_pkt_byte_cnt[thread_tx_queue_id - 1] += copy_len;
 
-	}
+    //     assert(tcp_sndbuf(tpcb) >= copy_len);
+	// 	assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	// 	assert(tcp_output(tpcb) == ERR_OK);
+	// }
+
+	// pingpong test, client mode and server mode have same code
+
+	int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
+	pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
+
+	tcp_recv_handler_profile(copy_len);
+
+	assert(tcp_sndbuf(tpcb) >= copy_len);
+	assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	assert(tcp_output(tpcb) == ERR_OK);
+
 	tcp_recved(tpcb, p->tot_len);
 	pbuf_free(p);
 
@@ -860,30 +831,36 @@ int main(int argc, char *const *argv)
 			{
 				unsigned long now = ({ struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); (ts.tv_sec * 1000000000UL + ts.tv_nsec); });
 				if (now - prev_ts > 1000000000UL) {
-					printf("[%s]: %10lu Requests/sec  (rx %11lu bps, tx %11lu bbs)\n",
-							(mode_server ? "server" : "client"), io_stat[0], io_stat[1] * 8, io_stat[2] * 8);
-					memset(io_stat, 0, sizeof(io_stat));
+					// printf("[%s]: %10lu Requests/sec  (rx %11lu bps, tx %11lu bbs)\n",
+					// 		(mode_server ? "server" : "client"), io_stat[0], io_stat[1] * 8, io_stat[2] * 8);
+					// memset(io_stat, 0, sizeof(io_stat));
 
-					for (int tid = 0; tid < g_tcp_thread_num; tid++)
-					{
-						struct tcp_thread_ctx *ctx = &tcp_thread_ctxs[tid];
+					// for (int tid = 0; tid < g_tcp_thread_num; tid++)
+					// {
+					// 	struct tcp_thread_ctx *ctx = &tcp_thread_ctxs[tid];
 
-						LOG_INFO("tid: %d, loop_state: %d\n", tid, ctx->loop_state);
-					}
+					// 	LOG_INFO("tid: %d, loop_state: %d\n", tid, ctx->loop_state);
+					// }
+
+					double duration = (double)(now - prev_ts) / 1000000000;					
 
 					uint64_t recv_pkt_tot = 0, recv_pkt_byte_tot = 0;
 					for (int i = 0; i < g_tcp_thread_num; i++)
-					{   // 
+					{   
+						LOG_INFO("tcp_thread %d, recv_pkt_cnt/s: %lf, recv_pkt_byte_cnt/s: %lf, rtt_us avg: %lf\n", i,
+							    (double)recv_pkt_cnt[i] / duration, (double)recv_pkt_byte_cnt[i] / duration,
+								(double)recv_pkt_rtt_us[i] / recv_pkt_cnt[i]);
+
 						recv_pkt_tot += recv_pkt_cnt[i];
-						recv_pkt_cnt[i] = 0;
 						recv_pkt_byte_tot += recv_pkt_byte_cnt[i];
+						
+						recv_pkt_cnt[i] = 0;
 						recv_pkt_byte_cnt[i] = 0;
+						recv_pkt_rtt_us[i] = 0;
 					}
 
-					double duration = (double)(now - prev_ts) / 1000000000;
 					double recv_pkt_per_sec = (double)recv_pkt_tot / duration;
 					double recv_pkt_byte_per_sec = (double)recv_pkt_byte_tot / duration;
-
 					LOG_INFO("duration: %lf, recv_pkt_per_sec: %lf, recv_pkt_byte_per_sec: %lf\n",
 						duration, recv_pkt_per_sec, recv_pkt_byte_per_sec);
 
@@ -891,6 +868,9 @@ int main(int argc, char *const *argv)
 					uint64_t tcp_input_frontend_pkt_cnt_tot = 0;
 					for (int i = 0; i < g_ip_thread_num; i++)
 					{
+						LOG_INFO("ip_thread %d, tcp_input_frontend_pkt_cnt/s: %lf\n", i,
+							    (double)tcp_input_frontend_pkt_cnt[i] / duration);
+
 						tcp_input_frontend_pkt_cnt_tot += tcp_input_frontend_pkt_cnt[i];
 						tcp_input_frontend_pkt_cnt[i] = 0;
 					}
