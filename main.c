@@ -594,6 +594,8 @@ int main(int argc, char *const *argv)
 	// int server_port = 10000, num_conn = 1;
 	// bool mode_server = true;
 	// int max_epoll_wait_timeout_ms = 0;
+	int ip_thread_num = 2;
+	int tcp_thread_num = 4;
 
 	LOG_DEBUG("main: 1\n");
 
@@ -612,7 +614,7 @@ int main(int argc, char *const *argv)
 	{
 		int ch;
 		bool _a = false, _g = false, _m = false;
-		while ((ch = getopt(argc, argv, "a:c:e:g:l:m:p:s:")) != -1) {
+		while ((ch = getopt(argc, argv, "a:c:e:g:i:j:l:m:p:s:")) != -1) {
 			switch (ch) {
 			case 'a':
 				inet_pton(AF_INET, optarg, &_addr);
@@ -635,6 +637,12 @@ int main(int argc, char *const *argv)
 			case 'l':
 				// content_len = atol(optarg);
 				break;
+			case 'i':
+			    ip_thread_num = atoi(optarg);
+				break;
+			case 'j':
+			    tcp_thread_num = atoi(optarg);
+				break;
 			case 'p':
 				server_port = atoi(optarg);
 				break;
@@ -650,7 +658,7 @@ int main(int argc, char *const *argv)
 		assert(_a && _g && _m);
 	}
 
-	LOG_DEBUG("main: 3\n");
+	LOG_INFO("main: 3, ip_thread_num: %d, tcp_thread_num: %d\n", ip_thread_num, tcp_thread_num);
 	// {
 	// 	uint16_t nb_rxd = NUM_SLOT;
 	// 	uint16_t nb_txd = NUM_SLOT;
@@ -688,8 +696,7 @@ int main(int argc, char *const *argv)
 	// 			assert(!rte_eth_dev_rx_intr_ctl_q(0 /* port id */, 0 /* queue */, RTE_EPOLL_PER_THREAD, RTE_INTR_EVENT_ADD, NULL));
 	// 	}
 	// }
-	int ip_thread_num = 2;
-	int tcp_thread_num = 4;
+
 
 	nic_init(ip_thread_num, tcp_thread_num, max_epoll_wait_timeout_ms);
 
