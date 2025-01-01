@@ -191,14 +191,15 @@ _Thread_local struct timespec recv_time;
 
 void tcp_recv_handler_profile(int len)
 {
-	recv_pkt_cnt[thread_tx_queue_id - 1]++;
-	recv_pkt_byte_cnt[thread_tx_queue_id - 1] += len;
+	LWIP_UNUSED_ARG(len);
+	// recv_pkt_cnt[thread_tx_queue_id - 1]++;
+	// recv_pkt_byte_cnt[thread_tx_queue_id - 1] += len;
 
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	int64_t rtt_us = (now.tv_nsec - recv_time.tv_nsec) / 1000 + (now.tv_sec - recv_time.tv_sec) * 1000 * 1000;
-	recv_pkt_rtt_us[thread_tx_queue_id - 1] += rtt_us;
-	recv_time = now;
+	// int64_t rtt_us = (now.tv_nsec - recv_time.tv_nsec) / 1000 + (now.tv_sec - recv_time.tv_sec) * 1000 * 1000;
+	// recv_pkt_rtt_us[thread_tx_queue_id - 1] += rtt_us;
+	// recv_time = now;
 }
 
 static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
@@ -254,14 +255,23 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 	// pingpong test, client mode and server mode have same code
     tcp_thread_process_ts[11] = get_mono_tnesc();
 
-	int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
-	pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
+	// int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
+	// pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
 
-	tcp_recv_handler_profile(copy_len);
+	if  (p->len != 64)
+	    LOG_INFO("not recv 64 bytes pkt\n");
+
+	// assume single pkt
+	assert(p->next == NULL);
+	int copy_len = p->len;
+	char* temp_buf = p->payload;
+
+
+	// tcp_recv_handler_profile(copy_len);
 
 	tcp_thread_process_ts[12] = get_mono_tnesc();
 	assert(tcp_sndbuf(tpcb) >= copy_len);
-	assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	assert(tcp_write(tpcb, temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
 	tcp_thread_process_ts[15] = get_mono_tnesc();
 	assert(tcp_output(tpcb) == ERR_OK);
 
