@@ -925,8 +925,9 @@ int main(int argc, char *const *argv)
 					for (int i = 0; i < g_ip_thread_num; i++)
 					{
 						struct ip_thread_ctx* ctx = get_ip_thread_ctx_by_id(i);
-						LOG_INFO("ip_thread %d, input_num/s: %lf, enqueue_num/s: %lf\n", i,
-							    (double)ctx->input_num / duration, (double)ctx->enqueue_num / duration);
+						LOG_INFO("ip_thread %d, input_num/s: %lf, enqueue_num/s: %lf, event_fd/enqueue: %lf\n", i,
+							    (double)ctx->input_num / duration, (double)ctx->enqueue_num / duration,
+							(double)ctx->enqueue_event_fd_num / ctx->enqueue_num);
 
 						enqueue_num_tot += ctx->enqueue_num;
 						ctx->input_num = 0;
