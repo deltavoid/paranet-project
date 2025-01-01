@@ -194,23 +194,30 @@ int tcp_recv_copy_data(struct pbuf* p, char* buf, int max_len)
 	return copy_len;
 }
 
-uint64_t recv_pkt_cnt[TCP_THREAD_MAX_NUM];
-uint64_t recv_pkt_byte_cnt[TCP_THREAD_MAX_NUM];
-uint64_t recv_pkt_rtt_us[TCP_THREAD_MAX_NUM];
+// uint64_t recv_pkt_cnt[TCP_THREAD_MAX_NUM];
+// uint64_t recv_pkt_byte_cnt[TCP_THREAD_MAX_NUM];
+// uint64_t recv_pkt_rtt_us[TCP_THREAD_MAX_NUM];
 
-_Thread_local struct timespec recv_time;
+// _Thread_local struct timespec recv_time;
 
 void tcp_recv_handler_profile(int len)
 {
 	LWIP_UNUSED_ARG(len);
 	// recv_pkt_cnt[thread_tx_queue_id - 1]++;
 	// recv_pkt_byte_cnt[thread_tx_queue_id - 1] += len;
+	struct tcp_thread_ctx* ctx = get_tcp_thread_ctx_default();
+
+	ctx->recv_pkt_num++;
+	ctx->recv_pkt_bytes += len;
+
 
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	// int64_t rtt_us = (now.tv_nsec - recv_time.tv_nsec) / 1000 + (now.tv_sec - recv_time.tv_sec) * 1000 * 1000;
+	int64_t rtt_us = (now.tv_nsec - ctx->recv_time.tv_nsec) / 1000 + (now.tv_sec - ctx->recv_time.tv_sec) * 1000 * 1000;
 	// recv_pkt_rtt_us[thread_tx_queue_id - 1] += rtt_us;
+	ctx->recv_pkt_rtt_us += rtt_us;
 	// recv_time = now;
+	ctx->recv_time = now;
 }
 
 static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
@@ -279,7 +286,7 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 	char* temp_buf = p->payload;
 
 
-	// tcp_recv_handler_profile(copy_len);
+	tcp_recv_handler_profile(copy_len);
 
 	// tcp_thread_process_ts[10] = get_mono_tnesc();
 	assert(tcp_sndbuf(tpcb) >= copy_len);
@@ -291,7 +298,7 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 
 	tcp_recved(tpcb, p->tot_len);
 
-	
+
 	pbuf_free(p);
 	// tcp_thread_process_ts[13] = get_mono_tnesc();
 
@@ -894,16 +901,18 @@ int main(int argc, char *const *argv)
 					uint64_t recv_pkt_tot = 0, recv_pkt_byte_tot = 0;
 					for (int i = 0; i < g_tcp_thread_num; i++)
 					{   
-						LOG_INFO("tcp_thread %d, recv_pkt_cnt/s: %lf, recv_pkt_byte_cnt/s: %lf, rtt_us avg: %lf\n", i,
-							    (double)recv_pkt_cnt[i] / duration, (double)recv_pkt_byte_cnt[i] / duration,
-								(double)recv_pkt_rtt_us[i] / recv_pkt_cnt[i]);
+						struct tcp_thread_ctx* ctx = get_tcp_thread_ctx_by_id(i);
 
-						recv_pkt_tot += recv_pkt_cnt[i];
-						recv_pkt_byte_tot += recv_pkt_byte_cnt[i];
+						LOG_INFO("tcp_thread %d, recv_pkt_cnt/s: %lf, recv_pkt_byte_cnt/s: %lf, rtt_us avg: %lf\n", i,
+							    (double)ctx->recv_pkt_num / duration, (double)ctx->recv_pkt_bytes / duration,
+								(double)ctx->recv_pkt_rtt_us / ctx->recv_pkt_num);
+
+						recv_pkt_tot += ctx->recv_pkt_num;
+						recv_pkt_byte_tot += ctx->recv_pkt_bytes;
 						
-						recv_pkt_cnt[i] = 0;
-						recv_pkt_byte_cnt[i] = 0;
-						recv_pkt_rtt_us[i] = 0;
+						ctx->recv_pkt_num = 0;
+						ctx->recv_pkt_bytes = 0;
+						ctx->recv_pkt_rtt_us = 0;
 					}
 
 					double recv_pkt_per_sec = (double)recv_pkt_tot / duration;
@@ -912,18 +921,20 @@ int main(int argc, char *const *argv)
 						duration, recv_pkt_per_sec, recv_pkt_byte_per_sec);
 
 					
-					uint64_t tcp_input_frontend_pkt_cnt_tot = 0;
+					uint64_t enqueue_num_tot = 0;
 					for (int i = 0; i < g_ip_thread_num; i++)
 					{
-						LOG_INFO("ip_thread %d, tcp_input_frontend_pkt_cnt/s: %lf\n", i,
-							    (double)tcp_input_frontend_pkt_cnt[i] / duration);
+						struct ip_thread_ctx* ctx = get_ip_thread_ctx_by_id(i);
+						LOG_INFO("ip_thread %d, input_num/s: %lf, enqueue_num/s: %lf\n", i,
+							    (double)ctx->input_num / duration, (double)ctx->enqueue_num / duration);
 
-						tcp_input_frontend_pkt_cnt_tot += tcp_input_frontend_pkt_cnt[i];
-						tcp_input_frontend_pkt_cnt[i] = 0;
+						enqueue_num_tot += ctx->enqueue_num;
+						ctx->input_num = 0;
+						ctx->enqueue_num = 0;
 					}
 
-					double tcp_input_frontend_pkt_cnt_per_sec = (double)tcp_input_frontend_pkt_cnt_tot / duration;
-					LOG_INFO("tcp_input_frontend_pkt_cnt_per_sec: %lf\n", tcp_input_frontend_pkt_cnt_per_sec);
+					double enqueue_num_per_sec = (double)enqueue_num_tot / duration;
+					LOG_INFO("enqueue_num_per_sec: %lf\n", enqueue_num_per_sec);
 
 
 					prev_ts = now;
