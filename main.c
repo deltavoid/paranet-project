@@ -124,6 +124,7 @@ static err_t low_level_output(struct netif *netif __attribute__((unused)), struc
 {
 	LOG_DEBUG("low_level_output: 1, p->tot_len = %d\n", p->tot_len);
 
+	tcp_thread_process_ts[19] = get_mono_tnesc();
 	char buf[PACKET_BUF_SIZE];
 	void *bufptr, *largebuf = NULL;
 	if (sizeof(buf) < p->tot_len) {
@@ -134,6 +135,8 @@ static err_t low_level_output(struct netif *netif __attribute__((unused)), struc
 		bufptr = buf;
 
 	pbuf_copy_partial(p, bufptr, p->tot_len, 0);
+
+	tcp_thread_process_ts[20] = get_mono_tnesc();
 
 	// assert((tx_mbufs[tx_idx] = rte_pktmbuf_alloc(pktmbuf_pool)) != NULL);
 	struct rte_mbuf* tx_mbuf = NULL;
@@ -148,11 +151,15 @@ static err_t low_level_output(struct netif *netif __attribute__((unused)), struc
 	assert(tx_mbuf != NULL);
 	tx_mbufs[tx_idx] = tx_mbuf;
 
+	tcp_thread_process_ts[21] = get_mono_tnesc();
+
 	assert(p->tot_len <= RTE_MBUF_DEFAULT_BUF_SIZE);
 	rte_memcpy(rte_pktmbuf_mtod(tx_mbufs[tx_idx], void *), bufptr, p->tot_len);
 	rte_pktmbuf_pkt_len(tx_mbufs[tx_idx]) = rte_pktmbuf_data_len(tx_mbufs[tx_idx]) = p->tot_len;
 	if (++tx_idx == MAX_PKT_BURST)
 		tx_flush();
+
+	tcp_thread_process_ts[22] = get_mono_tnesc();
 
 	if (largebuf)
 		free(largebuf);
@@ -272,12 +279,12 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 	tcp_thread_process_ts[10] = get_mono_tnesc();
 	assert(tcp_sndbuf(tpcb) >= copy_len);
 	assert(tcp_write(tpcb, temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
-	tcp_thread_process_ts[12] = get_mono_tnesc();
+	tcp_thread_process_ts[13] = get_mono_tnesc();
 	assert(tcp_output(tpcb) == ERR_OK);
 
 	tcp_recved(tpcb, p->tot_len);
 	pbuf_free(p);
-	tcp_thread_process_ts[13] = get_mono_tnesc();
+	// tcp_thread_process_ts[13] = get_mono_tnesc();
 
 
 	LOG_DEBUG("tcp_recv_handler: 3, end\n");
