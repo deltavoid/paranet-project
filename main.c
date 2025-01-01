@@ -252,18 +252,22 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 	// }
 
 	// pingpong test, client mode and server mode have same code
+    tcp_thread_process_ts[11] = get_mono_tnesc();
 
 	int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
 	pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
 
 	tcp_recv_handler_profile(copy_len);
 
+	tcp_thread_process_ts[12] = get_mono_tnesc();
 	assert(tcp_sndbuf(tpcb) >= copy_len);
 	assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
+	tcp_thread_process_ts[15] = get_mono_tnesc();
 	assert(tcp_output(tpcb) == ERR_OK);
 
 	tcp_recved(tpcb, p->tot_len);
 	pbuf_free(p);
+	tcp_thread_process_ts[16] = get_mono_tnesc();
 
 
 	LOG_DEBUG("tcp_recv_handler: 3, end\n");
