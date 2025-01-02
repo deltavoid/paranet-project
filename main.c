@@ -932,6 +932,7 @@ int main(int argc, char *const *argv)
 						enqueue_num_tot += ctx->enqueue_num;
 						ctx->input_num = 0;
 						ctx->enqueue_num = 0;
+						ctx->enqueue_event_fd_num = 0;
 					}
 
 					double enqueue_num_per_sec = (double)enqueue_num_tot / duration;
