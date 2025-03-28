@@ -59,6 +59,7 @@
 #include <lwip/tcp.h>
 #include <lwip/timeouts.h>
 #include <lwip/prot/tcp.h>
+#include <lwip/logging.h>
 
 #include <netif/ethernet.h>
 
@@ -278,6 +279,8 @@ int main(int argc, char *const *argv)
 	int server_port = 10000, num_conn = 1;
 	bool mode_server = true;
 	int max_epoll_wait_timeout_ms = 0;
+
+	LOG_DEBUG("main: 1\n");
 
 	{
 		int ret;
