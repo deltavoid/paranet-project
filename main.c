@@ -79,6 +79,9 @@ static size_t httpdatalen;
 
 static void tx_flush(void)
 {
+	if  (tx_idx > 0)
+	    LOG_DEBUG("tx_flush: tx_idx = %d\n", tx_idx);
+	
 	int xmit = tx_idx, xmitted = 0;
 	while (xmitted != xmit)
 		xmitted += rte_eth_tx_burst(0 /* port id */, 0 /* queue id */, &tx_mbufs[xmitted], xmit - xmitted);
@@ -87,6 +90,8 @@ static void tx_flush(void)
 
 static err_t low_level_output(struct netif *netif __attribute__((unused)), struct pbuf *p)
 {
+	LOG_DEBUG("low_level_output: 1, p->tot_len = %d\n", p->tot_len);
+
 	char buf[PACKET_BUF_SIZE];
 	void *bufptr, *largebuf = NULL;
 	if (sizeof(buf) < p->tot_len) {
@@ -107,6 +112,8 @@ static err_t low_level_output(struct netif *netif __attribute__((unused)), struc
 
 	if (largebuf)
 		free(largebuf);
+
+	LOG_DEBUG("low_level_output: 2, end\n");
 	return ERR_OK;
 }
 
@@ -123,6 +130,10 @@ struct http_response {
 static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 			      struct pbuf *p, err_t err)
 {
+	// LOG_DEBUG("tcp_recv_handler: 1, p->tot_len = %d\n", p->tot_len);
+    LOG_DEBUG("tcp_recv_handler: 1\n");
+
+
 	if (err != ERR_OK)
 		return err;
 	if (!p) {
@@ -201,6 +212,8 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 	}
 	tcp_recved(tpcb, p->tot_len);
 	pbuf_free(p);
+
+	LOG_DEBUG("tcp_recv_handler: 2, end\n");
 	return ERR_OK;
 }
 
@@ -448,11 +461,11 @@ int main(int argc, char *const *argv)
 		LOG_DEBUG("main: 7\n");
 		while (1) {
 
-			LOG_DEBUG("main: 7.1\n");
+			// LOG_DEBUG("main: 7.1\n");
 			struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
 			unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, 0 /* queue id */, rx_mbufs, MAX_PKT_BURST);
 
-			LOG_DEBUG("main: 7.2\n"); 
+			// LOG_DEBUG("main: 7.2\n"); 
 			for (i = 0; i < nb_rx; i++) {
 
 				LOG_DEBUG("main: 7.3\n");
@@ -473,13 +486,13 @@ int main(int argc, char *const *argv)
 				rte_pktmbuf_free(rx_mbufs[i]);
 			}
 
-			LOG_DEBUG("main: 7.8\n");
+			// LOG_DEBUG("main: 7.8\n");
 			tx_flush();
 
-			LOG_DEBUG("main: 7.9\n");
+			// LOG_DEBUG("main: 7.9\n");
 			sys_check_timeouts();
 
-			LOG_DEBUG("main: 7.10\n");
+			// LOG_DEBUG("main: 7.10\n");
 			{
 				unsigned long now = ({ struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); (ts.tv_sec * 1000000000UL + ts.tv_nsec); });
 				if (now - prev_ts > 1000000000UL) {
@@ -491,7 +504,7 @@ int main(int argc, char *const *argv)
 
 			}
 
-			LOG_DEBUG("main: 7.11\n");
+			// LOG_DEBUG("main: 7.11\n");
 			if (!nb_rx && max_epoll_wait_timeout_ms) {
 				
 				LOG_DEBUG("main: 7.12\n");
@@ -505,7 +518,8 @@ int main(int argc, char *const *argv)
 				rte_eth_dev_rx_intr_disable(0 /* port id */, 0 /* queue id */);
 			}
 
-			LOG_DEBUG("main: 7.14\n");
+		    usleep(1);
+			// LOG_DEBUG("main: 7.14\n");
 		}
 	}
 
