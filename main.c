@@ -289,6 +289,7 @@ int main(int argc, char *const *argv)
 		argv += ret;
 	}
 
+	LOG_DEBUG("main: 2\n");
 	assert(rte_eth_dev_count_avail() == 1);
 
 	{
@@ -332,6 +333,7 @@ int main(int argc, char *const *argv)
 		assert(_a && _g && _m);
 	}
 
+	LOG_DEBUG("main: 3\n");
 	{
 		uint16_t nb_rxd = NUM_SLOT;
 		uint16_t nb_txd = NUM_SLOT;
@@ -371,6 +373,7 @@ int main(int argc, char *const *argv)
 	}
 
 	/* setting up lwip */
+	LOG_DEBUG("main: 4\n");
 	{
 		lwip_init();
 		assert(netif_add(&_netif, &_addr, &_mask, &_gate, NULL, if_init, ethernet_input) != NULL);
@@ -379,7 +382,10 @@ int main(int argc, char *const *argv)
 		netif_set_up(&_netif);
 	}
 
+	LOG_DEBUG("main: 5\n");
 	if (mode_server) { /* server mode */
+		
+		LOG_DEBUG("main: 5.1\n");
 		{
 			size_t buflen = content_len + 256 /* for http hdr */;
 			char *content;
@@ -391,14 +397,28 @@ int main(int argc, char *const *argv)
 			free(content);
 			printf("http data length: %lu bytes\n", httpdatalen);
 		}
+
+		LOG_DEBUG("main: 5.2\n");
 		{
 			struct tcp_pcb *tpcb, *_tpcb;
+		
+			LOG_DEBUG("main: 5.2.1\n");
 			assert((_tpcb = tcp_new()) != NULL);
+			
+			LOG_DEBUG("main: 5.2.2\n");
 			assert(tcp_bind(_tpcb, IP_ADDR_ANY, server_port) == ERR_OK);
+			
+			LOG_DEBUG("main: 5.2.3.\n");
 			assert((tpcb = tcp_listen(_tpcb)) != NULL);
+			
+			LOG_DEBUG("main: 5.2.4\n");
 			tcp_accept(tpcb, accept_handler);
+
+			LOG_DEBUG("main: 5.2.5\n");
 			tcp_ext_arg_set_callbacks(tpcb, 0, &tcp_ext_arg_cbs);
 			tcp_ext_arg_set(tpcb, 0, NULL);
+		
+			LOG_DEBUG("main: 5.2.6\n");
 		}
 	} else { /* client mode */
 		int i;
@@ -418,26 +438,48 @@ int main(int argc, char *const *argv)
 		}
 	}
 
+	LOG_DEBUG("main: 6\n");
 	printf("-- application has started --\n");
 
 	/* primary loop */
 	{
 		unsigned long prev_ts = 0;
+		
+		LOG_DEBUG("main: 7\n");
 		while (1) {
+
+			LOG_DEBUG("main: 7.1\n");
 			struct rte_mbuf *rx_mbufs[MAX_PKT_BURST];
 			unsigned short i, nb_rx = rte_eth_rx_burst(0 /* port id */, 0 /* queue id */, rx_mbufs, MAX_PKT_BURST);
+
+			LOG_DEBUG("main: 7.2\n"); 
 			for (i = 0; i < nb_rx; i++) {
+
+				LOG_DEBUG("main: 7.3\n");
 				{
+					LOG_DEBUG("main: 7.4\n");
 					struct pbuf *p;
 					assert((p = pbuf_alloc(PBUF_RAW, rte_pktmbuf_pkt_len(rx_mbufs[i]), PBUF_POOL)) != NULL);
+
+					LOG_DEBUG("main: 7.5\n");
 					pbuf_take(p, rte_pktmbuf_mtod(rx_mbufs[i], void *), rte_pktmbuf_pkt_len(rx_mbufs[i]));
+					
+					LOG_DEBUG("main: 7.6\n");
 					p->len = p->tot_len = rte_pktmbuf_pkt_len(rx_mbufs[i]);
 					assert(_netif.input(p, &_netif) == ERR_OK);
+				
+					LOG_DEBUG("main: 7.7\n");
 				}
 				rte_pktmbuf_free(rx_mbufs[i]);
 			}
+
+			LOG_DEBUG("main: 7.8\n");
 			tx_flush();
+
+			LOG_DEBUG("main: 7.9\n");
 			sys_check_timeouts();
+
+			LOG_DEBUG("main: 7.10\n");
 			{
 				unsigned long now = ({ struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); (ts.tv_sec * 1000000000UL + ts.tv_nsec); });
 				if (now - prev_ts > 1000000000UL) {
@@ -448,16 +490,26 @@ int main(int argc, char *const *argv)
 				}
 
 			}
+
+			LOG_DEBUG("main: 7.11\n");
 			if (!nb_rx && max_epoll_wait_timeout_ms) {
+				
+				LOG_DEBUG("main: 7.12\n");
 				assert(!rte_eth_dev_rx_intr_enable(0 /* port id */, 0 /* queue id */));
 				{
 					struct rte_epoll_event ev;
 					(void) rte_epoll_wait(RTE_EPOLL_PER_THREAD, &ev, 1, max_epoll_wait_timeout_ms < 0 ? 100 : (max_epoll_wait_timeout_ms > 100 ? 100 : max_epoll_wait_timeout_ms));
 				}
+
+				LOG_DEBUG("main: 7.13\n");
 				rte_eth_dev_rx_intr_disable(0 /* port id */, 0 /* queue id */);
 			}
+
+			LOG_DEBUG("main: 7.14\n");
 		}
 	}
 
+
+	LOG_DEBUG("main: 8\n");
 	return 0;
 }
