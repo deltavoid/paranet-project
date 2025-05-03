@@ -303,6 +303,8 @@ int main(int argc, char *const *argv)
 	}
 
 	LOG_DEBUG("main: 2\n");
+	LOG_INFO("dev_count_avail: %d\n", rte_eth_dev_count_avail());
+
 	assert(rte_eth_dev_count_avail() == 1);
 
 	{
