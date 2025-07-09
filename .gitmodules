@@ -1,0 +1,13 @@
+
+[submodule "paranet-dpdk"]
+	path = dpdk/paranet-dpdk
+	url = https://github.com/deltavoid/paranet-dpdk.git
+
+[submodule "paranet-lwip"]
+	path = lwip/paranet-lwip
+	url = https://github.com/deltavoid/paranet-lwip.git
+
+[submodule "paranet-lwip-contrib"]
+	path = lwip/paranet-lwip-contrib
+	url = https://github.com/deltavoid/paranet-lwip-contrib.git
+
