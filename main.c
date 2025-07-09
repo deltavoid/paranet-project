@@ -141,6 +141,8 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 		return ERR_OK;
 	}
 	io_stat[1] += p->tot_len;
+	LOG_DEBUG("tcp_recv_handler: 2, p->tot_len: %d\n", p->tot_len);
+
 	if (!arg) { /* server mode */
 		char buf[4] = { 0 };
 		pbuf_copy_partial(p, buf, 3, 0);
