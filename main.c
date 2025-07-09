@@ -127,6 +127,9 @@ struct http_response {
 	char buf[1UL << 16];
 };
 
+// temp buf, not for multi_thread
+char tcp_recv_temp_buf[2048];
+
 static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 			      struct pbuf *p, err_t err)
 {
@@ -144,15 +147,21 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 	LOG_DEBUG("tcp_recv_handler: 2, p->tot_len: %d\n", p->tot_len);
 
 	if (!arg) { /* server mode */
-		char buf[4] = { 0 };
-		pbuf_copy_partial(p, buf, 3, 0);
-		if (!strncmp(buf, "GET", 3)) {
-			io_stat[0]++;
-			io_stat[2] += httpdatalen;
-			assert(tcp_sndbuf(tpcb) >= httpdatalen);
-			assert(tcp_write(tpcb, httpbuf, httpdatalen, TCP_WRITE_FLAG_COPY) == ERR_OK);
-			assert(tcp_output(tpcb) == ERR_OK);
-		}
+		// char buf[4] = { 0 };
+		int copy_len = (p->tot_len < 2048 ? p->tot_len : 2048);
+		pbuf_copy_partial(p, tcp_recv_temp_buf, copy_len, 0);
+
+		// if (!strncmp(buf, "GET", 3)) {
+		// 	io_stat[0]++;
+		// 	io_stat[2] += httpdatalen;
+		// 	assert(tcp_sndbuf(tpcb) >= httpdatalen);
+		// 	assert(tcp_write(tpcb, httpbuf, httpdatalen, TCP_WRITE_FLAG_COPY) == ERR_OK);
+		// 	assert(tcp_output(tpcb) == ERR_OK);
+		// }
+		assert(tcp_sndbuf(tpcb) >= copy_len);
+		assert(tcp_write(tpcb, tcp_recv_temp_buf, copy_len, TCP_WRITE_FLAG_COPY) == ERR_OK);
+		assert(tcp_output(tpcb) == ERR_OK);
+
 	} else { /* client mode */
 		struct http_response *r = (struct http_response *) arg;
 		assert(p->tot_len < (sizeof(r->buf) - r->cur));
@@ -215,7 +224,7 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 	tcp_recved(tpcb, p->tot_len);
 	pbuf_free(p);
 
-	LOG_DEBUG("tcp_recv_handler: 2, end\n");
+	LOG_DEBUG("tcp_recv_handler: 3, end\n");
 	return ERR_OK;
 }
 
