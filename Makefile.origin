@@ -5,9 +5,9 @@ PKGCONF = pkg-config
 
 CLEANFILES = $(PROGS) *.o *.d
 
-# DPDK_VER=22.03
-# LWIP_VER=2.1.3
-# CONTRIB_VER=2.1.0
+DPDK_VER=22.03
+LWIP_VER=2.1.3
+CONTRIB_VER=2.1.0
 
 NO_MAN=
 CFLAGS = -O3 -pipe -g -rdynamic
@@ -23,8 +23,7 @@ C_OBJS = $(C_SRCS:.c=.o)
 
 # for dpdk
 DPDK_DIR = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))dpdk
-# DPDK_SRC_DIR = $(DPDK_DIR)/dpdk-$(DPDK_VER)
-DPDK_SRC_DIR = $(DPDK_DIR)/paranet-dpdk
+DPDK_SRC_DIR = $(DPDK_DIR)/dpdk-$(DPDK_VER)
 DPDK_INSTALL_DIR = $(DPDK_DIR)/install
 DPDK_PKG_CONFIG_PATH=$(DPDK_INSTALL_DIR)/lib/x86_64-linux-gnu/pkgconfig
 DPDK_PKG_CONFIG_FILE=$(DPDK_PKG_CONFIG_PATH)/libdpdk.pc
@@ -33,10 +32,8 @@ LDFLAGS += $(shell PKG_CONFIG_PATH=$(DPDK_PKG_CONFIG_PATH) $(PKGCONF) --libs lib
 
 # for lwip
 LWIP_DIR = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))lwip
-# LWIP_SRC_DIR = $(LWIP_DIR)/lwip-$(LWIP_VER)
-LWIP_SRC_DIR = $(LWIP_DIR)/paranet-lwip
-# CONTRIB_SRC_DIR = $(LWIP_DIR)/contrib-$(CONTRIB_VER)
-CONTRIB_SRC_DIR = $(LWIP_DIR)/paranet-lwip-contrib
+LWIP_SRC_DIR = $(LWIP_DIR)/lwip-$(LWIP_VER)
+CONTRIB_SRC_DIR = $(LWIP_DIR)/contrib-$(CONTRIB_VER)
 CFLAGS += -I$(LWIP_SRC_DIR)/src/include -I$(CONTRIB_SRC_DIR) -I$(CONTRIB_SRC_DIR)/ports/unix/port/include
 LWIP_OBJS = $(LWIP_SRC_DIR)/src/api/api_lib.o \
 			$(LWIP_SRC_DIR)/src/api/api_msg.o \
@@ -94,26 +91,23 @@ CLEANFILES += $(LWIP_OBJS)
 .PHONY: all
 all: $(PROGS)
 
-# $(DPDK_SRC_DIR).tar.xz:
-# 	wget -P $(DPDK_DIR) https://fast.dpdk.org/rel/dpdk-$(DPDK_VER).tar.xz
+$(DPDK_SRC_DIR).tar.xz:
+	wget -P $(DPDK_DIR) https://fast.dpdk.org/rel/dpdk-$(DPDK_VER).tar.xz
 
-# $(CONTRIB_SRC_DIR).zip:
-# 	wget -P $(LWIP_DIR) http://download.savannah.nongnu.org/releases/lwip/contrib-$(CONTRIB_VER).zip
+$(CONTRIB_SRC_DIR).zip:
+	wget -P $(LWIP_DIR) http://download.savannah.nongnu.org/releases/lwip/contrib-$(CONTRIB_VER).zip
 
-# $(LWIP_SRC_DIR).zip:
-# 	wget -P $(LWIP_DIR) http://download.savannah.nongnu.org/releases/lwip/lwip-$(LWIP_VER).zip
+$(LWIP_SRC_DIR).zip:
+	wget -P $(LWIP_DIR) http://download.savannah.nongnu.org/releases/lwip/lwip-$(LWIP_VER).zip
 
-# $(DPDK_SRC_DIR): $(DPDK_SRC_DIR).tar.xz
-# 	tar xvf $< -C $(DPDK_DIR)
+$(DPDK_SRC_DIR): $(DPDK_SRC_DIR).tar.xz
+	tar xvf $< -C $(DPDK_DIR)
 
-# $(CONTRIB_SRC_DIR): $(CONTRIB_SRC_DIR).zip
-# 	unzip -n $< -d $(LWIP_DIR)
+$(CONTRIB_SRC_DIR): $(CONTRIB_SRC_DIR).zip
+	unzip -n $< -d $(LWIP_DIR)
 
-# $(LWIP_SRC_DIR): $(LWIP_SRC_DIR).zip
-# 	unzip -n $< -d $(LWIP_DIR)
-
-
-
+$(LWIP_SRC_DIR): $(LWIP_SRC_DIR).zip
+	unzip -n $< -d $(LWIP_DIR)
 
 $(DPDK_PKG_CONFIG_FILE): $(DPDK_SRC_DIR)
 	meson --prefix=$(DPDK_INSTALL_DIR) --libdir=lib/x86_64-linux-gnu $(DPDK_SRC_DIR)/build $(DPDK_SRC_DIR)
