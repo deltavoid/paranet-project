@@ -240,6 +240,7 @@ static const struct tcp_ext_arg_callbacks tcp_ext_arg_cbs =  {
 
 static err_t accept_handler(void *arg __attribute__((unused)), struct tcp_pcb *tpcb, err_t err)
 {
+	LOG_DEBUG("accept_handler: 1, enter\n");
 	if (err != ERR_OK)
 		return err;
 
@@ -256,6 +257,7 @@ static err_t accept_handler(void *arg __attribute__((unused)), struct tcp_pcb *t
 	tpcb->keep_idle = (60 * 1000);
 	tpcb->keep_cnt = 1;
 
+	LOG_DEBUG("accept_handler: 2, end\n");
 	return err;
 }
 
