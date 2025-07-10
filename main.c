@@ -143,6 +143,7 @@ static err_t tcp_recv_handler(void *arg, struct tcp_pcb *tpcb,
 		tcp_close(tpcb);
 		return ERR_OK;
 	}
+	io_stat[0]++;
 	io_stat[1] += p->tot_len;
 	LOG_DEBUG("tcp_recv_handler: 2, p->tot_len: %d\n", p->tot_len);
 
