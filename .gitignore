@@ -1,5 +1,5 @@
-lwip
-dpdk
+# lwip
+dpdk/install
 
 app
 main.o
