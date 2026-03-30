@@ -548,21 +548,25 @@ void client_mode_init()
 {
 	LOG_INFO("client_mode_init --------------- \n");
 	int i;
-		printf("%d concurrent connection(s)\n", num_conn);
-		for (i = 0; i < num_conn; i++) {
-			struct tcp_pcb *tpcb;
-			assert((tpcb = tcp_new()) != NULL);
-			{
-				struct http_response *r;
-				assert((r = (struct http_response *) malloc(sizeof(struct http_response))) != NULL);
-				r->state = 0;
-				r->cur = 0;
-				tcp_arg(tpcb, (void *) r);
-				tcp_ext_arg_set(tpcb, 0, (void *) r);
-			}
-			assert(tcp_connect(tpcb, &_srv_ip, server_port, connected_handler) == ERR_OK);
+	printf("%d concurrent connection(s)\n", num_conn);
+	for (i = 0; i < num_conn; i++)
+	{
+		LOG_DEBUG("client_mode_init: 1\n");
+		struct tcp_pcb *tpcb;
+		assert((tpcb = tcp_new()) != NULL);
+		{
+			LOG_DEBUG("client_mode_init: 2\n");
+			struct http_response *r;
+			assert((r = (struct http_response *)malloc(sizeof(struct http_response))) != NULL);
+			r->state = 0;
+			r->cur = 0;
+			tcp_arg(tpcb, (void *)r);
+			tcp_ext_arg_set(tpcb, 0, (void *)r);
 		}
-
+		LOG_DEBUG("client_mode_init: 3\n");
+		assert(tcp_connect(tpcb, &_srv_ip, server_port, connected_handler) == ERR_OK);
+	}
+	LOG_DEBUG("client_mode_init: 4\n");
 }
 
 bool mode_server = true;
