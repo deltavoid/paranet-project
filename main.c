@@ -778,7 +778,7 @@ int main(int argc, char *const *argv)
 
 	/* primary loop */
 	{
-		// unsigned long prev_ts = 0;
+		unsigned long prev_ts = 0;
 		
 		LOG_DEBUG("main: 7\n");
 		while (1) {
@@ -816,52 +816,52 @@ int main(int argc, char *const *argv)
 			// LOG_DEBUG("main: 7.9\n");
 			// sys_check_timeouts();
 
-			// LOG_DEBUG("main: 7.10\n");
-			// {
-			// 	unsigned long now = ({ struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); (ts.tv_sec * 1000000000UL + ts.tv_nsec); });
-			// 	if (now - prev_ts > 1000000000UL) {
-			// 		printf("[%s]: %10lu Requests/sec  (rx %11lu bps, tx %11lu bbs)\n",
-			// 				(mode_server ? "server" : "client"), io_stat[0], io_stat[1] * 8, io_stat[2] * 8);
-			// 		memset(io_stat, 0, sizeof(io_stat));
+			LOG_DEBUG("main: 7.10\n");
+			{
+				unsigned long now = ({ struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts); (ts.tv_sec * 1000000000UL + ts.tv_nsec); });
+				if (now - prev_ts > 1000000000UL) {
+					printf("[%s]: %10lu Requests/sec  (rx %11lu bps, tx %11lu bbs)\n",
+							(mode_server ? "server" : "client"), io_stat[0], io_stat[1] * 8, io_stat[2] * 8);
+					memset(io_stat, 0, sizeof(io_stat));
 
-			// 		for (int tid = 0; tid < g_tcp_thread_num; tid++)
-			// 		{
-			// 			struct tcp_thread_ctx *ctx = &tcp_thread_ctxs[tid];
+					for (int tid = 0; tid < g_tcp_thread_num; tid++)
+					{
+						struct tcp_thread_ctx *ctx = &tcp_thread_ctxs[tid];
 
-			// 			LOG_INFO("tid: %d, loop_state: %d\n", tid, ctx->loop_state);
-			// 		}
+						LOG_INFO("tid: %d, loop_state: %d\n", tid, ctx->loop_state);
+					}
 
-			// 		uint64_t recv_pkt_tot = 0, recv_pkt_byte_tot = 0;
-			// 		for (int i = 0; i < g_tcp_thread_num; i++)
-			// 		{   // 
-			// 			recv_pkt_tot += recv_pkt_cnt[i];
-			// 			recv_pkt_cnt[i] = 0;
-			// 			recv_pkt_byte_tot += recv_pkt_byte_cnt[i];
-			// 			recv_pkt_byte_cnt[i] = 0;
-			// 		}
+					uint64_t recv_pkt_tot = 0, recv_pkt_byte_tot = 0;
+					for (int i = 0; i < g_tcp_thread_num; i++)
+					{   // 
+						recv_pkt_tot += recv_pkt_cnt[i];
+						recv_pkt_cnt[i] = 0;
+						recv_pkt_byte_tot += recv_pkt_byte_cnt[i];
+						recv_pkt_byte_cnt[i] = 0;
+					}
 
-			// 		double duration = (double)(now - prev_ts) / 1000000000;
-			// 		double recv_pkt_per_sec = (double)recv_pkt_tot / duration;
-			// 		double recv_pkt_byte_per_sec = (double)recv_pkt_byte_tot / duration;
+					double duration = (double)(now - prev_ts) / 1000000000;
+					double recv_pkt_per_sec = (double)recv_pkt_tot / duration;
+					double recv_pkt_byte_per_sec = (double)recv_pkt_byte_tot / duration;
 
-			// 		LOG_INFO("duration: %lf, recv_pkt_per_sec: %lf, recv_pkt_byte_per_sec: %lf\n",
-			// 			duration, recv_pkt_per_sec, recv_pkt_byte_per_sec);
+					LOG_INFO("duration: %lf, recv_pkt_per_sec: %lf, recv_pkt_byte_per_sec: %lf\n",
+						duration, recv_pkt_per_sec, recv_pkt_byte_per_sec);
 
 					
-			// 		uint64_t tcp_input_frontend_pkt_cnt_tot = 0;
-			// 		for (int i = 0; i < g_ip_thread_num; i++)
-			// 		{
-			// 			tcp_input_frontend_pkt_cnt_tot += tcp_input_frontend_pkt_cnt[i];
-			// 			tcp_input_frontend_pkt_cnt[i] = 0;
-			// 		}
+					uint64_t tcp_input_frontend_pkt_cnt_tot = 0;
+					for (int i = 0; i < g_ip_thread_num; i++)
+					{
+						tcp_input_frontend_pkt_cnt_tot += tcp_input_frontend_pkt_cnt[i];
+						tcp_input_frontend_pkt_cnt[i] = 0;
+					}
 
-			// 		double tcp_input_frontend_pkt_cnt_per_sec = (double)tcp_input_frontend_pkt_cnt_tot / duration;
-			// 		LOG_INFO("tcp_input_frontend_pkt_cnt_per_sec: %lf\n", tcp_input_frontend_pkt_cnt_per_sec);
+					double tcp_input_frontend_pkt_cnt_per_sec = (double)tcp_input_frontend_pkt_cnt_tot / duration;
+					LOG_INFO("tcp_input_frontend_pkt_cnt_per_sec: %lf\n", tcp_input_frontend_pkt_cnt_per_sec);
 
 
-			// 		prev_ts = now;
-			// 	}
-			// }
+					prev_ts = now;
+				}
+			}
 
 
 			// LOG_DEBUG("main: 7.11\n");
