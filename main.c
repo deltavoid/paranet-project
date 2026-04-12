@@ -899,6 +899,7 @@ int main(int argc, char *const *argv)
 					double duration = (double)(now - prev_ts) / 1000000000;					
 
 					uint64_t recv_pkt_tot = 0, recv_pkt_byte_tot = 0;
+					double recv_rtt_tot = 0;
 					for (int i = 0; i < g_tcp_thread_num; i++)
 					{   
 						struct tcp_thread_ctx* ctx = get_tcp_thread_ctx_by_id(i);
@@ -909,6 +910,7 @@ int main(int argc, char *const *argv)
 
 						recv_pkt_tot += ctx->recv_pkt_num;
 						recv_pkt_byte_tot += ctx->recv_pkt_bytes;
+						recv_rtt_tot += ctx->recv_pkt_rtt_us;
 						
 						ctx->recv_pkt_num = 0;
 						ctx->recv_pkt_bytes = 0;
@@ -917,8 +919,9 @@ int main(int argc, char *const *argv)
 
 					double recv_pkt_per_sec = (double)recv_pkt_tot / duration;
 					double recv_pkt_byte_per_sec = (double)recv_pkt_byte_tot / duration;
-					LOG_INFO("duration: %lf, recv_pkt_per_sec: %lf, recv_pkt_byte_per_sec: %lf\n",
-						duration, recv_pkt_per_sec, recv_pkt_byte_per_sec);
+					double recv_pkt_rtt_avg = recv_rtt_tot / recv_pkt_tot;
+					LOG_INFO("duration: %lf, recv_pkt_per_sec: %lf, recv_pkt_byte_per_sec: %lf, rtt_avg(us): %lf\n",
+						duration, recv_pkt_per_sec, recv_pkt_byte_per_sec, recv_pkt_rtt_avg);
 
 					
 					uint64_t enqueue_num_tot = 0;
